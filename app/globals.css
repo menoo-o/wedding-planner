@@ -1,4 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=TASA+Explorer:wght@400..800&display=swap');
 @import "tailwindcss";
+
 
 :root {
   --background: #ffffff;
@@ -14,13 +16,120 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* ////COLORS/////  */
+  /* Core Neutrals */
+  --color-ink-900: #212529;   /* Primary text / headings */
+  --color-ink-800: #343A40;   /* Secondary text */
+  --color-ink-600: #6C757D;   /* Muted text / icons */
+
+  /* Surface */
+  --color-surface-100: #E9ECEF; /* Backgrounds / cards */
+
+ /* Accent */
+  --color-accent-danger: #C81319; /* Alerts, critical states */
+
+/* Typography scale */
+  --text-xs: 0.75rem;   /* metadata, captions */
+  --text-sm: 0.875rem;  /* secondary text */
+  --text-md: 1rem;      /* body */
+  --text-lg: 1.125rem;  /* section headers */
+  --text-xl: 1.375rem;  /* page headers */
+  --text-2xl: 1.75rem;  /* key numbers */
+
+   --font-main: 'TASA Explorer', monospace;
+
+  --font-size-xxxl: clamp(11rem, 11vw, 13rem);    
+  --font-size-xxl: clamp(6rem, 7vw, 8rem);   
+  --font-size-mini-xxl: clamp(4rem, 6vw, 5.5rem);
+
+  --font-size-xl: clamp(3rem, 5vw, 4rem);   /* Hero / Landing headlines */
+  --font-size-lg: clamp(2rem, 3vw, 2.5rem); /* H1 */
+  --font-size-mid: clamp(1.75rem, 2.5vw, 2.25rem); /* mid */
+  --font-size-md: clamp(1.5rem, 2vw, 2rem); /* H2 */
+  --font-size-reg: clamp(1.125rem, 1.5vw, 1.375rem); /* H3 / subtext / buttons */
+  --font-size-sm: clamp(1rem, 1.1vw, 1.125rem); /* Body */
+  
+  --font-size-xs: clamp(0.75rem, 0.85vw, 1rem); /* Captions, footnotes */
+
+  /* Font Weights */
+  --font-weight-extrabold: 900;
+  --font-weight-bold: 700;
+  --font-weight-medium: 500;
+  --font-weight-regular: 400;
+
+/*TYPOGRAPHY HEIGHT  */
+ --leading-tight: 1.25;
+ --leading-normal: 1.5;
+ --leading-relaxed: 1.75;
+
+/* SPACING  */
+  --space-0: 0rem;
+  --space-1: 0.25rem;  /* 4px */
+  --space-2: 0.5rem;   /* 8px */
+  --space-3: 0.75rem;  /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-5: 1.25rem;  /* 20px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+  --space-10: 2.5rem;  /* 40px */
+  --space-12: 3rem;    /* 48px */
+  --space-16: 4rem;    /* 64px */
+  --space-20: 6rem;    /* 64px */
+
+/* BORDER  */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+/* SHADOWS */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+
+/* CONTAINER PADDING  */
+ --container-max: 1200px;
+ --container-padding: 2rem;
+
+}
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
+
+
+
+body {
+  background: var(--color-surface-100);
+  color: var(--color-ink-900);
+  font-family: var(--font-main), monospace;
+  font-feature-settings: "liga" on, "kern" on;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  font-optical-sizing: auto;
+  scroll-behavior: smooth;
+  line-height: var(--leading-normal);
+  height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+

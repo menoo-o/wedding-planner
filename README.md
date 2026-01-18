@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Project Name (Veya | Wedding Planner)
 
-## Getting Started
+This project is an early-stage experiment focused on designing and building a **calm, decision-first dashboard** for tracking progress, readiness, and key actions around a single high-stakes goal or lifecycle (initially modeled around planning and preparation).
 
-First, run the development server:
+The emphasis at this stage is **structure, system design, and UX fundamentals**, not visual polish or feature completeness.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Goals
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Design a clear, minimal dashboard that surfaces **what matters now**
+- Reduce cognitive load by focusing on **signals, not noise**
+- Explore modern React patterns (Server Components, Server Actions, optimistic UI)
+- Build a scalable design system from first principles (CSS tokens, layout primitives)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Non-Goals (for now)
 
-To learn more about Next.js, take a look at the following resources:
+This project intentionally does **not** aim to be:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- A task manager
+- A collaboration tool
+- A full analytics platform
+- A generic CRUD dashboard
+- A production-ready SaaS
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Features that introduce unnecessary complexity are deferred by design.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Current Stage
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Status:** Early / Foundations
+
+What exists or is in progress:
+- Global design system (colors, typography, spacing, layout tokens)
+- Information architecture & page structure
+- Dashboard concept and wireframe-level decisions
+- Exploration of UX patterns (optimistic updates, async workflows)
+
+What does *not* exist yet:
+- Final UI
+- Authentication flows
+- Complete data models
+- Mobile-responsive layouts
+- Polished copy or branding
+
+---
+
+## Tech Stack (subject to change)
+
+- Next.js (App Router)
+- React 18/19 features
+- Server Actions
+- Supabase (planned for data & auth)
+- CSS-first design system (no heavy UI framework at this stage)
+
+---
+
+## Design Philosophy
+
+- **Clarity over completeness**
+- **Decisions over data**
+- **Structure before styling**
+- **Opinionated defaults**
+- **Progressive complexity**
+
+If a feature does not meaningfully improve decision-making, it does not ship.
+
+---
+
+## Development Approach
+
+The project is being built incrementally:
+
+1. Design tokens & global CSS
+2. Layout primitives
+3. Page structure & data flow
+4. Async UX patterns
+5. Visual refinement (later)
+
+This order is intentional.
+
+---
+
+## Disclaimer
+
+This repository is a **work in progress** and may change direction as ideas are tested and refined.  
+Expect breaking changes, refactors, and incomplete features.
+
+---
+
+## License
+
+TBD
