@@ -4,39 +4,34 @@ import { useState, useEffect } from "react"
 import TimeUnit from "./Hero-TimeUnit"
 
 export default function CountdownTimer() {
-  const [time, setTime] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  })
+  const targetDate = new Date("2026-03-14T00:00:00").getTime()
+
+  const [distance, setDistance] = useState(
+    targetDate - Date.now()
+  )
 
   useEffect(() => {
-    // Set target date to 30 days from now
-    const targetDate = new Date()
-    targetDate.setDate(targetDate.getDate() + 30)
-
     const interval = setInterval(() => {
-      const now = new Date().getTime()
-      const distance = targetDate.getTime() - now
+      const remaining = targetDate - Date.now()
 
-      if (distance < 0) {
-        setTime({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+      if (remaining <= 0) {
+        setDistance(0)
         clearInterval(interval)
-      } else {
-        setTime({
-          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((distance % (1000 * 60)) / 1000),
-        })
+        return
       }
+
+      setDistance(remaining)
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [targetDate])
 
- 
+  // 👉 DERIVED VALUES (no state)
+  const days = Math.floor(distance / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((distance / (1000 * 60 * 60)) % 24)
+  const minutes = Math.floor((distance / (1000 * 60)) % 60)
+  const seconds = Math.floor((distance / 1000) % 60)
+
 
   return (
    <section className="hero-countdown">
@@ -52,10 +47,10 @@ export default function CountdownTimer() {
 
     <div className="hero-countdown__timer timer-container">
       <div className="hero-countdown__units">
-        <TimeUnit value={time.days} label="Days" />
-        <TimeUnit value={time.hours} label="Hours" />
-        <TimeUnit value={time.minutes} label="Minutes" />
-        <TimeUnit value={time.seconds} label="Seconds" />
+        <TimeUnit value={days} label="Days" />
+        <TimeUnit value={hours} label="Hours" />
+        <TimeUnit value={minutes} label="Minutes" />
+        <TimeUnit value={seconds} label="Seconds" />
       </div>
     </div>
 
