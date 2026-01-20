@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from "react"
 import TimeUnit from "./Hero-TimeUnit"
+import './hero.css'
 
 export default function CountdownTimer() {
-  const targetDate = new Date("2026-03-14T00:00:00").getTime()
+  const targetDate = new Date("2026-03-14T19:30:00+03:00").getTime();
 
-  const [distance, setDistance] = useState(
-    targetDate - Date.now()
-  )
-
+  const [distance, setDistance] = useState<number>(() => {
+    const now = Date.now()
+    return targetDate - now
+  })
+  
   useEffect(() => {
     const interval = setInterval(() => {
       const remaining = targetDate - Date.now()
@@ -34,33 +36,31 @@ export default function CountdownTimer() {
 
 
   return (
-   <section className="hero-countdown">
-  <div className="hero-countdown__content">
-    <header className="hero-countdown__header">
-      <h1 className="hero-countdown__title">
-        Countdown Timer
-      </h1>
-      <p className="hero-countdown__subtitle">
-        Time until the event
-      </p>
-    </header>
+    <section className="hero-countdown">
+    <div className="hero-countdown__content">
+      {/* TIMER */}
+      <div className="hero-countdown__timer">
+        <div className="timer-grid">
+          {/* Column 1 */}
+          <div className="timer-col timer-days">
+            <TimeUnit value={days} label="Days" variant="days"/>
+          </div>
 
-    <div className="hero-countdown__timer timer-container">
-      <div className="hero-countdown__units">
-        <TimeUnit value={days} label="Days" />
-        <TimeUnit value={hours} label="Hours" />
-        <TimeUnit value={minutes} label="Minutes" />
-        <TimeUnit value={seconds} label="Seconds" />
+          {/* Column 2 */}
+          <div className="timer-col">
+            <TimeUnit value={hours} label="Hours" variant="hours" />
+          </div>
+
+          {/* Column 3 (stacked) */}
+          <div className="timer-col timer-col--stack">
+            <TimeUnit value={minutes} label="Minutes" variant="minutes" />
+            <TimeUnit value={seconds} label="Seconds" variant="seconds" />
+          </div>
+        </div>
       </div>
+
+   
     </div>
-
-    <footer className="hero-countdown__footer">
-      <small className="hero-countdown__footnote">
-        Default countdown: 30 days from now
-      </small>
-    </footer>
-  </div>
 </section>
-
   )
-}
+} 

@@ -8,10 +8,10 @@ function NavSection() {
       <div className="nav-section__logo">
         <Link href="/" className="nav-section__logo-link">
           <Image
-            src="/logo.webp"
+            src="/logo-v1.png"
             alt="Brand name"
-            width={100}
-            height={100}
+            width={120}
+            height={120}
             className="nav-section__logo-img"
             priority
           />
@@ -23,13 +23,11 @@ function NavSection() {
         className="nav-section__overlay-toggle"
         aria-label="Open navigation menu"
       >
-        <Image
-          src="/logo.webp"
-          alt=""
-          width={80}
-          height={80}
-          className="nav-section__overlay-toggle-img"
-        />
+       <div className="nav-custom-icon">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
       </button>
     </nav>
   )

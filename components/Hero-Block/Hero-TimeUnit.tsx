@@ -1,16 +1,29 @@
+import './hero.css'
 
-const TimeUnit = ({ value, label }: { value: number; label: string }) => (
-  <figure className="time-unit">
-    <div className="time-unit__value-wrapper">
-      <span className="time-unit__value">
-        {String(value).padStart(2, "0")}
-      </span>
-    </div>
+type TimeUnitProps = {
+  value: number;
+  label?: string;
+  variant?: "days" | "hours" | "minutes" | "seconds";
+};
 
-    <figcaption className="time-unit__label">
-      {label}
-    </figcaption>
-  </figure>
-)
+const TimeUnit = (props: TimeUnitProps) => {
+  const value = props.value;
+  const label = props.label;
+  const variant = props.variant;
 
-export default TimeUnit
+  return (
+    <figure className={`time-unit time-unit--${variant}`}>
+      <div className="time-unit__value-wrapper">
+        <span className="time-unit__value">
+          {String(value).padStart(2, "0")}
+        </span>
+      </div>
+
+      <figcaption className="time-unit__label">
+        {label}
+      </figcaption>
+    </figure>
+  );
+};
+
+export default TimeUnit;

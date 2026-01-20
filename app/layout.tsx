@@ -1,6 +1,26 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
 import NavSection from "../components/Navbar/Nav";
+
+const monument = localFont({
+  src: [
+    {
+      path: "../public/fonts/MonumentExtended-Regular.otf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/MonumentExtended-Ultrabold.otf",
+      weight: "800",
+      style: "normal",
+    },
+  
+  ],
+  variable: "--font-monument",
+  display: "swap",
+});
+
 
 export const metadata: Metadata = {
   title: "Veya | WedPlans",
@@ -13,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={monument.variable}>
       <body
       >
         <NavSection />

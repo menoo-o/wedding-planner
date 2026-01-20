@@ -1,5 +1,59 @@
-.nav-section{
-    display: flex;
-    justify-content: space-between;
-    padding: 0rem 3rem;
+.nav-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 92px;
+  padding-inline: 2rem;
+
+  overflow: visible; /* 🔑 */
+}
+
+
+.nav-section__logo {
+  display: flex;
+  align-items: center;
+  transform: translateY(4px); /* adjust by eye */
+}
+
+.nav-section__logo-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-section__logo-img {
+  height: 105px;
+  max-height: 120px;   /* visual size */
+  width: auto;
+  object-fit: contain;
+}
+/* NAV ICON */
+.nav-custom-icon {
+  /* Layout */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* Aligns shorter lines to the right */
+  gap: 8px;              /* Spacing between the bars */
+  /* Sizing */
+  width: 60px;           /* Total width of the longest bar */
+  cursor: pointer;
+}
+
+.nav-custom-icon span {
+  display: block;
+  height: 4px;           /* Thickness of the lines */
+  background-color: #6C757D;
+  border-radius: 3px;    /* Optional: adds slightly rounded ends */
+  transition: 0.3s ease; /* Optional: for hover effects */
+}
+
+
+/* Top and Bottom lines (shorter) */
+.nav-custom-icon span:nth-child(1),
+.nav-custom-icon span:nth-child(3) {
+  width: 60%;            /* Adjust percentage to match the desired offset */
+}
+
+/* Middle line (longer) */
+.nav-custom-icon span:nth-child(2) {
+  width: 100%;
 }

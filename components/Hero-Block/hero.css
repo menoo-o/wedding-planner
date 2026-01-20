@@ -1,0 +1,82 @@
+/* Container - The main wrapper for the countdown */
+.hero-countdown__timer {
+  width: 100%;
+  font-family: var(--font-monument), sans-serif;
+  padding: 2rem 0;
+}
+
+/* 3-column grid: Days, Hours, Stacked(Mins+Secs) */
+.timer-grid {
+  display: grid;
+  /* Col 1 & 2 are equal heavyweights (2 parts), 
+     Col 3 is the slim sidebar (1 part) */
+  grid-template-columns: 2fr 2fr 1fr; 
+  align-items: stretch;
+  border-top: 1px solid var(--color-ink-800);
+  border-bottom: 1px solid var(--color-ink-800);
+}
+
+/* Base column styling with vertical "grid line" borders */
+.timer-col {
+  display: flex;
+  flex-direction: column;
+  padding: 3rem;
+  border-right: 1px solid var(--color-ink-800);
+}
+
+.timer-col:last-child {
+  border-right: none;
+}
+
+/* Stacked column for Minutes and Seconds */
+.timer-col--stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0;
+}
+
+/* Labels: Placed above the values like in the reference */
+.time-unit__label {
+  font-size: .85rem;
+  text-transform: uppercase;
+  color: var(--color-accent-danger);
+  margin-bottom: -0.5rem; /* Tucks the label closer to the massive numbers */
+  font-weight: 400;
+}
+
+/* Massive Values for Days and Hours */
+.time-unit--days .time-unit__value,
+.time-unit--hours .time-unit__value {
+  font-size: 21.3vw; /* Fluid size based on screen width */
+  font-weight: 800;
+  line-height: 0.85;
+  letter-spacing: -0.011em; /* Tight tracking for that brutalist look */
+  color: var(--color-ink-600);
+
+}
+
+/* Stacked Values for Minutes and Seconds (Slightly smaller) */
+.time-unit--minutes .time-unit__value,
+.time-unit--seconds .time-unit__value {
+  font-size: 7vw; /* Smaller scale for the stacked column */
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-ink-600);
+  display: block;
+}
+
+.time-unit--seconds .time-unit__value{
+    font-size: 4.5vw;
+}
+
+/* Optional: Add a divider between Mins and Secs inside the stack */
+.time-unit--minutes {
+  border-bottom: 1px solid var(--color-ink-800);
+  padding-bottom: 1.5rem;
+}
+
+.time-unit--seconds {
+  padding-top: 0rem;
+}
+

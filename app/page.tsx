@@ -5,9 +5,10 @@ export default function Home() {
   return (
     <>    
       <CountdownTimer />
-      <Link href="/todo" className="text-blue-500 underline">
+      
+      {/* <Link href="/todo" className="text-blue-500 underline">
         Go to Todo Page
-      </Link>
+      </Link> */}
     </>
   );
 }
