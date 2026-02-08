@@ -2,7 +2,12 @@ import Image from "next/image"
 import Link from "next/link"
 import "./nav.css"
 
-function NavSection() {
+import NavAvatar from "../Nav-Avatar/Avatar"
+import { Suspense } from "react"
+
+export default async function NavSection() {
+
+
   return (
     <nav className="nav-section" aria-label="Primary navigation">
       <div className="nav-section__logo">
@@ -18,6 +23,13 @@ function NavSection() {
         </Link>
       </div>
 
+
+   
+
+       <Suspense fallback={<p>Loading component...</p>}>
+        <NavAvatar />
+      </Suspense>
+
       <button
         type="button"
         className="nav-section__overlay-toggle"
@@ -28,9 +40,9 @@ function NavSection() {
         <span></span>
         <span></span>
       </div>
+
       </button>
     </nav>
   )
 }
 
-export default NavSection

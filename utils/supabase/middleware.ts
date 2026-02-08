@@ -8,7 +8,7 @@ export async function updateSession(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll() {
@@ -27,21 +27,24 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: DO NOT REMOVE auth.getUser()
-
-  const { data: { user }, } = await supabase.auth.getUser()
-
+  // const startTime = Date.now()
+  const {data} = await supabase.auth.getClaims()
+  const user = data?.claims
+  
+  // console.log(`finished auth.getClaims in ${Date.now() - startTime}ms`)
   if (
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth')
+    !request.nextUrl.pathname.startsWith('/auth') &&
+    !request.nextUrl.pathname.startsWith('/error')
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
-    url.pathname = '/account/login'
+    url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
+  
 
   return supabaseResponse
 }

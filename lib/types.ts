@@ -7,3 +7,15 @@ export interface Todo {
   created_at: string;
   optimistic?: boolean;
 }
+
+// //LOGIN PAGE
+
+export type LoginState = {
+  error: string | null;
+  issues: Record<string, string[]>;
+};
+
+export const initialLoginState: LoginState = {
+  error: null,
+  issues: {},
+};
