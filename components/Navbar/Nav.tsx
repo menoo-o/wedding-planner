@@ -2,9 +2,6 @@ import Image from "next/image"
 import Link from "next/link"
 import "./nav.css"
 
-import NavAvatar from "../Nav-Avatar/Avatar"
-import { Suspense } from "react"
-
 export default async function NavSection() {
 
 
@@ -26,9 +23,7 @@ export default async function NavSection() {
 
    
 
-       <Suspense fallback={<p>Loading component...</p>}>
-        <NavAvatar />
-      </Suspense>
+       
 
       <button
         type="button"

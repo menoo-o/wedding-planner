@@ -1,21 +1,31 @@
 import './hero.css'
+import { ReactNode } from 'react';
 
 type TimeUnitProps = {
-  value: number;
+  value?: ReactNode;
   label?: string;
   variant?: "days" | "hours" | "minutes" | "seconds";
 };
 
 const TimeUnit = (props: TimeUnitProps) => {
-  const value = props.value;
-  const label = props.label;
-  const variant = props.variant;
+  const { value, label, variant } = props;
+
+  // 1. Determine how to render the value
+  const renderValue = () => {
+    // If it's a number or a string that looks like a number, pad it.
+    if (typeof value === 'number' || (typeof value === 'string' && !isNaN(Number(value)))) {
+      return String(value).padStart(2, "0");
+    }
+    
+    // If it's a React Component (like <RollingNumber />), just render it directly.
+    return value;
+  };
 
   return (
-    <figure className={`time-unit time-unit--${variant}`}>
+    <figure className={`time-unit time-unit--${variant}`} aria-label={`${label}`}>
       <div className="time-unit__value-wrapper">
         <span className="time-unit__value">
-          {String(value).padStart(2, "0")}
+          {renderValue()}
         </span>
       </div>
 
@@ -25,5 +35,4 @@ const TimeUnit = (props: TimeUnitProps) => {
     </figure>
   );
 };
-
 export default TimeUnit;
