@@ -3,6 +3,9 @@ import localFont from "next/font/local";
 import "./globals.css";
 import NavSection from "../components/Navbar/Nav";
 
+import NetworkListener from "@/components/NetworkStatus/useNetworkStatus";
+import NetworkToast from "@/components/NetworkStatus/NetworkToast";
+
 const monument = localFont({
   src: [
     {
@@ -37,6 +40,8 @@ export default function RootLayout({
       <body
       >
         <NavSection />
+        <NetworkListener />
+        <NetworkToast />
         {children}
       </body>
     </html>

@@ -1,35 +1,41 @@
-
+// components/navbar/UserSection.tsx
 import Image from "next/image"
+import { createClient } from "@/utils/supabase/server";
+import Link from "next/link";
 
-
-import { createClient } from "@/utils/supabase/server"
-
-export default async function NavAvatar() {
+export default async function UserSection() {
   const supabase = await createClient();
-  // No loading state needed! This happens on the server.
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
+
+  const { data } = await supabase.auth.getUser();
+
+  if (!data.user) {
+    return <a href="/login">Login</a>;
+  }
+
+  // Fetch profile data
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name, avatar_path")
+    .eq("id", data.user.id)
+    .single();
+
+  // Fallback to universal avatar if profile.avatar_path is null
+  const avatarUrl =
+    profile?.avatar_path || "/pfp.webp";
+
 
   return (
-    <>
-      {/* nav avatar */}
-      <div className="nav-avatar">
-        {user ? (
-          <Image
-            src={user.picture || "/pfp.webp"}
-            alt="User Avatar"
-            width={40}
-            height={40}
-            className="nav-avatar__image"
-          />
-        ) : (
-          <a href="/login" className="nav-login-link">Login</a>
-            
-        )}
-      </div>
-      
-
-    </>
-  )
+    <div className="user-section">
+      {/* Link to dashboard when img clicked */}
+      <Link href="/dashboard">
+      <Image 
+          src={avatarUrl}
+          alt="profile image"
+          width={32} 
+          height={32} 
+      />
+      </Link>
+      <span>{profile?.name}</span>
+    </div>
+  );
 }
-

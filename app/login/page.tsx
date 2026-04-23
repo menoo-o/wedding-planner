@@ -1,8 +1,13 @@
 
+
 import './login.css'
 import LoginForm from './LoginForm'
-export default function LoginPage() {
+
+
+export default async function LoginPage() {
   return (
     <LoginForm />
   )
 }
+
+

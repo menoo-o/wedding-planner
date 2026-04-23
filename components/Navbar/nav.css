@@ -2,27 +2,28 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 92px;
+  min-height: calc(100vh - 90rem);
   padding-inline: 2rem;
-
-  overflow: visible; /* 🔑 */
+  overflow: hidden; /* 🔑 */
+ 
 }
 
 
 .nav-section__logo {
   display: flex;
   align-items: center;
-  transform: translateY(4px); /* adjust by eye */
+  height: 100%;
 }
 
 .nav-section__logo-link {
   display: inline-flex;
   align-items: center;
+  height: 100%;
+  
 }
 
 .nav-section__logo-img {
-  height: 105px;
-  max-height: 120px;   /* visual size */
+ height: 100%;
   width: auto;
   object-fit: contain;
 }

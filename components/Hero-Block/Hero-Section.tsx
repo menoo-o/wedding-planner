@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import TimeUnit from "./Hero-TimeUnit"
 import './hero.css'
-import RollingNumber from "./Rolling-Animation"
+// import RollingNumber from "./Rolling-Animation"
 
 export default function CountdownTimer() {
   const targetDate = new Date("2026-03-14T19:30:00+03:00").getTime();
@@ -11,7 +11,7 @@ export default function CountdownTimer() {
    // ✅ start with null (no time math during render)
   const [distance, setDistance] = useState<number | null>(null);
 
-  const [isRolling, setIsRolling] = useState(true);
+  // const [isRolling, setIsRolling] = useState(true);
 
   useEffect(() => {
     console.log("⏱️ Timer Mount: Starting 1s interval");
@@ -31,17 +31,12 @@ export default function CountdownTimer() {
     update(); // run immediately on mount
 
 const interval = setInterval(update, 1000);
-
-  // 2. THE TRIGGER: Flip the switch after the animation finishes
-  // If your GSAP duration is 3s and max delay is 0.6s, 4 seconds is perfect.
   const timer = setTimeout(() => {
-    setIsRolling(false); 
-    console.log("Animation finished, switching to live timer!");
-  }, 4000);
+    clearInterval(interval);
+  }, targetDate - Date.now());
 
     return () => {
-      console.log("♻️ Timer Unmount: Cleaning up intervals/timeouts");
-    clearInterval(interval);
+      clearInterval(interval);
       clearTimeout(timer);
     }
   }, [targetDate]);
@@ -67,8 +62,7 @@ const interval = setInterval(update, 1000);
           {/* DAYS */}
           <div className="timer-col timer-days">
             <TimeUnit 
-             value={isRolling ? 
-            <RollingNumber startValue={99} endValue={days} delay={0} /> : days } 
+             value={ days } 
              label="Days" 
              variant="days"/>
           </div>
@@ -76,21 +70,18 @@ const interval = setInterval(update, 1000);
           {/* HOURS */}
           <div className="timer-col">
             <TimeUnit 
-             value={isRolling ? 
-             <RollingNumber startValue={24} endValue={hours} delay={0.2} /> : hours } 
+             value={ hours } 
              label="Hours" variant="hours" />
           </div>
 
           {/* MINS + SECS */}
           <div className="timer-col timer-col--stack">
             <TimeUnit 
-            value={isRolling ? 
-           <RollingNumber startValue={59} endValue={minutes} delay={0.4} /> : minutes} 
+            value={minutes} 
             label="Minutes" 
             variant="minutes" />
             <TimeUnit 
-            value={isRolling ? 
-            <RollingNumber startValue={59} endValue={seconds} delay={0.6} /> : seconds } 
+            value={ seconds } 
             label="Seconds" 
             variant="seconds" />
           </div>
