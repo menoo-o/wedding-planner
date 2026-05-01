@@ -47,9 +47,9 @@ export default function RollingNumber({
 
         // Two-layer swap structure (your original idea preserved)
         char.innerHTML = `
-          <span class="slot-stack">
-            <span class="slot-tile slot-tile--incoming">${glyph}</span>
-            <span class="slot-tile slot-tile--current">${glyph}</span>
+          <span className="slot-stack">
+            <span className="slot-tile slot-tile--incoming">${glyph}</span>
+            <span className="slot-tile slot-tile--current">${glyph}</span>
           </span>
         `
 

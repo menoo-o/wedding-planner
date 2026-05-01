@@ -1,28 +1,15 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
+
 import "./globals.css";
 import NavSection from "../components/Navbar/Nav";
 
 import NetworkListener from "@/components/NetworkStatus/useNetworkStatus";
 import NetworkToast from "@/components/NetworkStatus/NetworkToast";
 
-const monument = localFont({
-  src: [
-    {
-      path: "../public/fonts/MonumentExtended-Regular.otf",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../public/fonts/MonumentExtended-Ultrabold.otf",
-      weight: "800",
-      style: "normal",
-    },
-  
-  ],
-  variable: "--font-monument",
-  display: "swap",
-});
 
 
 export const metadata: Metadata = {
@@ -36,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={monument.variable}>
+    <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
       <body
       >
         <NavSection />

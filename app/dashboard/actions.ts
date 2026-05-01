@@ -7,22 +7,26 @@ import { redirect } from "next/navigation";
 
 
 type DashboardSummary = {
-  cashFund: number;
-  totalSpend: number;
-  topUps: number;
-  openingBalance: number;
-  netPosition: number;
-  user: string;
+  // Calculated Financial Totals
+  cashFund: number;       // The physical "liquidity" available right now
+  totalSpend: number;     // Gross consumption (everything spent this month)
+  topUps: number;         // Total new money added in this cycle
+  openingBalance: number; // The "Carry Forward" from last month
+  netPosition: number;    // True health (Cash Fund - Unpaid Pending Debts)
+  receivables: number;    // Money owed to household (e.g. loans given out)
+  // User Context
+  user: string;           // The UUID of the logged-in user
+
+  // The Recent Activity Feed
   recentTransactions: Array<{
     id: string;
-    transaction_type: string;
-    amount: number;   
-    payer_name: string;
-    payment_source: string;
-    reimbursement_status: string;
+    transaction_type: 'expense' | 'top_up' | 'loan_out'; // Use literals for better autocomplete
+    amount: number;
+    counterparty_name: string;
+    payment_source: 'household_fund' | 'personal_cash';
+    reimbursement_status: 'none' | 'pending' | 'settled';
     description: string;
     created_at: string;
-    
   }>;
 };
 
@@ -101,7 +105,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   // ---------------------------------------------------
   const { data: transactions, error: txError } = await supabase
     .from("transactions")
-    .select("transaction_type, amount, payer_name, payment_source, reimbursement_status, description")
+    .select("transaction_type, amount, counterparty_name, payment_source, reimbursement_status, description")
     .eq("cycle_id", cycle.id);
 
   if (txError || !transactions) {
@@ -115,7 +119,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   // Recent Activity: Get 5 most recent transactions for the "Activity Feed" section
   const { data: recentTransactions, error: expenseError } = await supabase
   .from("transactions")
-  .select("id,transaction_type, amount, payer_name, payment_source, reimbursement_status, description, created_at")
+  .select("id,transaction_type, amount, counterparty_name, payment_source, reimbursement_status, description, created_at")
   .eq("cycle_id", cycle.id)
   .eq("transaction_type", "expense") // Only show expenses in that list
   .order("created_at", { ascending: false }) // Newest first
@@ -128,69 +132,163 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   }
 
 
- // ---------------------------------------------------
-// 5. Calculate values
 // ---------------------------------------------------
-let topUps = 0;       // Fresh money added to the household
-let totalSpend = 0;   // Every penny spent by everyone (Gross Expense)
-let cashExpenses = 0; // Money that actually left the physical "Household Fund"
-let settledDebts = 0; // Expenses paid by others that the household has paid back
+// 5. Calculate values (Full Ledger Logic)
+// ---------------------------------------------------
+
+let topUps = 0;                 // Fresh money into household
+let totalSpend = 0;            // Real household consumption
+let directCashSpend = 0;       // Expenses paid instantly by household fund
+
+let payables = 0;              // Household owes others
+let settlementsPaid = 0;       // Cash used to clear payables
+
+let receivables = 0;           // Others owe household
+let loansGiven = 0;            // Cash lent outward
+let loansRecovered = 0;        // Cash returned from borrowers
+
+let refundsIn = 0;             // Expense refunds received
+let adjustmentsIn = 0;         // Positive corrections
+let adjustmentsOut = 0;        // Negative corrections
 
 for (const tx of transactions) {
   const amount = Number(tx.amount);
 
-  // Track total income/deposits for the month
+  // ------------------------------------------------
+  // A) TOP UPS
+  // ------------------------------------------------
   if (tx.transaction_type === "top_up") {
     topUps += amount;
+    continue;
   }
 
-  // Track absolute total spending for Analytics (The "1st-30th" view)
+  // ------------------------------------------------
+  // B) EXPENSES (Real Consumption)
+  // ------------------------------------------------
   if (tx.transaction_type === "expense") {
     totalSpend += amount;
+
+    // Paid directly from household fund
+    if (tx.payment_source === "household_fund") {
+      directCashSpend += amount;
+    }
+
+    // Someone else paid for household
+    else {
+      // If still unpaid = liability exists
+      if (tx.reimbursement_status === "pending") {
+        payables += amount;
+      }
+
+      // If already reimbursed = liability cleared, cash left house
+      if (tx.reimbursement_status === "settled") {
+        settlementsPaid += amount;
+      }
+    }
+
+    continue;
   }
 
-  // Track physical cash outflows
-  if (tx.transaction_type === "expense") {
-    // Scenario A: Admin paid directly from the household cash/bank
-    if (tx.payment_source === "household_fund") {
-      cashExpenses += amount;
-    } 
-    
-    // Scenario B: Someone else paid, but the household has already REIMBURSED them.
-    // This also counts as a physical cash outflow from the fund.
-    if (tx.payment_source !== "household_fund" && tx.reimbursement_status === "settled") {
-      settledDebts += amount;
+  // ------------------------------------------------
+  // C) HOUSEHOLD LENT MONEY TO SOMEONE
+  // ------------------------------------------------
+  if (tx.transaction_type === "loan_out") {
+    loansGiven += amount;
+
+    if (tx.reimbursement_status === "pending") {
+      receivables += amount;
     }
+
+    continue;
+  }
+
+  // ------------------------------------------------
+  // D) MONEY RETURNED TO HOUSEHOLD
+  // ------------------------------------------------
+  if (tx.transaction_type === "loan_return") {
+    loansRecovered += amount;
+
+    // reduces outstanding receivable
+    receivables -= amount;
+
+    continue;
+  }
+
+  // ------------------------------------------------
+  // E) SETTLEMENT ROW (Explicit repayment by house)
+  // optional if you store separate settlement rows
+  // ------------------------------------------------
+  if (tx.transaction_type === "settlement") {
+    settlementsPaid += amount;
+    payables -= amount;
+
+    continue;
+  }
+
+  // ------------------------------------------------
+  // F) REFUND RECEIVED
+  // Example: order cancelled / money returned
+  // ------------------------------------------------
+  if (tx.transaction_type === "refund") {
+    refundsIn += amount;
+    continue;
+  }
+
+  // ------------------------------------------------
+  // G) MANUAL ADJUSTMENTS
+  // ------------------------------------------------
+  if (tx.transaction_type === "adjustment") {
+    if (amount >= 0) {
+      adjustmentsIn += amount;
+    } else {
+      adjustmentsOut += Math.abs(amount);
+    }
+
+    continue;
   }
 }
 
 const openingBalance = Number(cycle.opening_balance);
 
-/**
- * CASH FUND:
- * The physical money currently available.
- * Calculation: Start with what we had + New money - (Direct spends + Debts paid back)
- */
-const cashFund = openingBalance + topUps - (cashExpenses + settledDebts);
+// ---------------------------------------------------
+// CASH FUND = Physical money available right now
+// ---------------------------------------------------
+const cashFund =
+  openingBalance +
+  topUps +
+  loansRecovered +
+  refundsIn +
+  adjustmentsIn -
+  (
+    directCashSpend +
+    settlementsPaid +
+    loansGiven +
+    adjustmentsOut
+  );
 
-/**
- * NET POSITION:
- * The "True" financial health of the household for the month.
- * It shows how much the household is actually "down" after all expenses are considered,
- * regardless of whether the physical cash has left the drawer yet.
- */
-const netPosition = totalSpend; 
+// ---------------------------------------------------
+// NET POSITION = True financial standing
+// cash + what others owe us - what we owe others
+// ---------------------------------------------------
+const netPosition =
+  cashFund +
+  receivables -
+  payables;
 
 return {
-  cashFund,       // "How much cash is in the box right now?"
-  totalSpend,     // "How much did we actually consume this month?"
-  topUps,         // "Total deposits"
-  openingBalance, // "Start of month balance"
-  netPosition,    // "Total liability/spending for this cycle"
-  recentTransactions, // "Recent expenses for the activity feed",
-  //also return the userID
+  cashFund,
+  totalSpend,
+  topUps,
+  openingBalance,
+  netPosition,
+  recentTransactions,
+  receivables,
   user: userId,
-
-};            
+};  
 
 }
+
+
+// available liquidity | 
+// total spend | net position  | Reimbursement pending (liabilities) 
+// burn rate below | projected runaway | 

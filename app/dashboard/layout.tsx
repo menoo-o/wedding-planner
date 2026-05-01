@@ -1,5 +1,6 @@
 import Sidebar from "@/components/Dashboard-Sidebar/Sidebar"
-import './private.css'
+// import './private.css'
+
 
 export default function DashboardLayout({
   children,
