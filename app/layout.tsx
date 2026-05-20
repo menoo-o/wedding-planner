@@ -5,7 +5,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
 
 import "./globals.css";
-import NavSection from "../components/Navbar/Nav";
+// import NavSection from "../components/Navbar/Nav";
 
 import NetworkListener from "@/components/NetworkStatus/useNetworkStatus";
 import NetworkToast from "@/components/NetworkStatus/NetworkToast";
@@ -24,9 +24,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
-      <body
-      >
-        <NavSection />
+      <head>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+      </head>
+      <body>
+        {/* <NavSection /> */}
         <NetworkListener />
         <NetworkToast />
         {children}

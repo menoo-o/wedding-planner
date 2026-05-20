@@ -1,6 +1,6 @@
 import React from 'react'  
 import Link from 'next/link'
-import './side.css'
+// import './side.css'
 function Sidebar() {
   return (
     <>
