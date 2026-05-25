@@ -86,6 +86,13 @@ type Transaction = {
     | null;
 };
 
+// Catefory Table: [id, household_id, name]
+type Category = {
+  id: string
+  household_id: string
+  name: string
+}
+
 export default async function Dashboard() {
   return (
     <div className="dashboard-container">
@@ -123,6 +130,7 @@ async function FetchDashboardData() {
    let householdMember: HouseholdMember | null = null
    let monthlyCycle: MonthlyCycle | null = null
    let transactions: Transaction[] = []
+   let categories: Category[] = []
 
   if (data?.claims?.sub) {
   // Fetch household membership for logged-in user
@@ -152,16 +160,52 @@ if (cycleError) {
   console.error("Failed to fetch monthly cycle:", cycleError)
 } else {
   monthlyCycle = cycle
-  // console.log("Current Monthly Cycle:", cycle)
+  console.log("Current Monthly Cycle:", cycle)
  }
+
+
+
+
+const { data: categoriesData, error: categoriesError } = await supabase
+  .from("categories")
+  .select("*")
+  .eq("household_id", memberData?.household_id)
+  .overrideTypes<Category[]>()
+
+if (categoriesError) {
+  console.error("Failed to fetch categories:", categoriesError)
+} else {
+  categories = categoriesData ?? []
+}
+
+
 ///////////////////////////////////////////////
 // Fetch data from transactions table (for current cycle)
-const { data: transactionsData, error: transactionsError } = await supabase
-  .from("transactions")
-  .select("*")
-  .eq("cycle_id", cycle?.id)
-  .order("created_at", { ascending: true });
-
+const { data: transactionsData, error: transactionsError } =
+  await supabase
+    .from("transactions")
+    .select(`
+      id,
+      household_id,
+      cycle_id,
+      created_by,
+      transaction_type,
+      category_id,
+      counterparty_name,
+      amount,
+      description,
+      reimbursement_status,
+      created_at,
+      cleared_at,
+      notes,
+      payment_account,
+      related_transaction_id,
+      paid_by
+    `)
+    .eq("cycle_id", cycle?.id)
+    .eq("transaction_type", "expense") // <--- HERE IS YOUR FILTER
+    .order("created_at", { ascending: false }) // newest first
+    .overrideTypes<Transaction[]>()
 
 
   if (transactionsError) {
@@ -170,93 +214,130 @@ const { data: transactionsData, error: transactionsError } = await supabase
   transactions = transactionsData ?? []
 }
 
+//define type TS for category
+// Category Table: [id, household_id, name]
+
+
 }
 
 return (
     <>  
-      
+      {/* Household Information */}
      <section className="space-y-4">
-    <div>
-      <h1 className="text-2xl font-semibold">
-        Welcome to Your Dashboard
-      </h1>
+        <div>
+          <h1 className="text-2xl font-semibold">
+            Welcome to Your Dashboard
+          </h1>
 
-      <p className="text-sm text-gray-500">
-        User ID: {data?.claims?.sub}
-      </p>
-    </div>
-
-    {householdMember ? (
-      <div className="rounded-lg border p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-medium">
-          Household Information
-        </h2>
-
-        <div className="space-y-1 text-sm">
-          <p>
-            <span className="font-medium">Household ID:</span>{" "}
-            {householdMember.household_id}
-          </p>
-
-          <p>
-            <span className="font-medium">Role:</span>{" "}
-            {householdMember.role}
-          </p>
-
-          <p>
-            <span className="font-medium">Status:</span>{" "}
-            {householdMember.status}
+          <p className="text-sm text-gray-500">
+            User ID: {data?.claims?.sub}
           </p>
         </div>
-      </div>
-    ) : (
-      <p className="text-sm text-gray-500">
-        No active household membership found.
-      </p>
-    )}
-  </section>
 
- {/* monthly cycle data */}
- <section>
-  {monthlyCycle ? (
-    <div className="rounded-lg border p-4 shadow-sm">
-      <h2 className="mb-3 text-lg font-medium">
-        Current Monthly Cycle
-      </h2>
+        {householdMember ? (
+          <div className="rounded-lg border p-4 shadow-sm">
+            <h2 className="mb-3 text-lg font-medium">
+              Household Information
+            </h2>
 
-      <div className="space-y-1 text-sm">
-        <p>
-          <span className="font-medium">Month:</span>{" "}
-          {monthlyCycle.month}
+            <div className="space-y-1 text-sm">
+              <p>
+                <span className="font-medium">Household ID:</span>{" "}
+                {householdMember.household_id}
+              </p>
+
+              <p>
+                <span className="font-medium">Role:</span>{" "}
+                {householdMember.role}
+              </p>
+
+              <p>
+                <span className="font-medium">Status:</span>{" "}
+                {householdMember.status}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">
+            No active household membership found.
+          </p>
+        )}
+      </section>
+
+    {/* monthly cycle data */}
+    <section>
+      {monthlyCycle ? (
+        <div className="rounded-lg border p-4 shadow-sm">
+          <h2 className="mb-3 text-lg font-medium">
+            Current Monthly Cycle
+          </h2>
+
+          <div className="space-y-1 text-sm">
+            <p>
+              <span className="font-medium">Month:</span>{" "}
+              {monthlyCycle.month}
+            </p>
+
+            <p>
+              <span className="font-medium">Year:</span>{" "}
+              {monthlyCycle.year}
+            </p>
+
+            <p>
+              <span className="font-medium">Opening Balance:</span>{" "}
+              {monthlyCycle.opening_balance}
+            </p>
+
+            <p>
+              <span className="font-medium">Closing Balance:</span>{" "}
+              {monthlyCycle.closing_balance}
+            </p>
+
+            <p>
+              <span className="font-medium">Status:</span>{" "}
+              {monthlyCycle.is_closed ? "Closed" : "Open"}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-gray-500">
+          No active monthly cycle found.
         </p>
+      )}
+    </section>
 
-        <p>
-          <span className="font-medium">Year:</span>{" "}
-          {monthlyCycle.year}
-        </p>
+    {/* cateogory */}
+    <section className="space-y-4">
+  <div>
+    <h2 className="text-lg font-semibold">Categories</h2>
+    <p className="text-sm text-gray-500">
+      Household expense categories
+    </p>
+  </div>
 
-        <p>
-          <span className="font-medium">Opening Balance:</span>{" "}
-          {monthlyCycle.opening_balance}
-        </p>
+  {categories.length > 0 ? (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {categories.map((category) => (
+        <div
+          key={category.id}
+          className="rounded-lg border p-3 shadow-sm transition hover:shadow-md"
+        >
+          <p className="font-medium">{category.name}</p>
 
-        <p>
-          <span className="font-medium">Closing Balance:</span>{" "}
-          {monthlyCycle.closing_balance}
-        </p>
-
-        <p>
-          <span className="font-medium">Status:</span>{" "}
-          {monthlyCycle.is_closed ? "Closed" : "Open"}
-        </p>
-      </div>
+          <p className="text-xs text-gray-400">
+            ID: {category.id}
+          </p>
+        </div>
+      ))}
     </div>
   ) : (
     <p className="text-sm text-gray-500">
-      No active monthly cycle found.
+      No categories found for this household.
     </p>
   )}
 </section>
+
+{/* transactions */}
 
 <section className="space-y-4">
   <div>
@@ -355,6 +436,7 @@ return (
     </div>
   )}
 </section>
+ 
 
 
     </> 

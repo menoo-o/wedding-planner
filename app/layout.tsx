@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import LogoutButton from '@/components/LogoutButton';
+
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
@@ -31,6 +33,7 @@ export default function RootLayout({
         {/* <NavSection /> */}
         <NetworkListener />
         <NetworkToast />
+        <LogoutButton />
         {children}
       </body>
     </html>
