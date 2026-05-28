@@ -1,4 +1,4 @@
-
+'use server'
 
 import './login.css'
 import LoginForm from './LoginForm'

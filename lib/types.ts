@@ -19,3 +19,13 @@ export const initialLoginState: LoginState = {
   error: null,
   issues: {},
 };
+
+
+
+// DASHBOARD PAGE
+
+export type HouseholdMember = {
+  household_id: string
+  role: "admin" | string
+  status: "active" | "inactive" | "pending" | string
+}
