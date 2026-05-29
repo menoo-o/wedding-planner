@@ -474,6 +474,8 @@
 import { readSupaTables } from "./queries";
 import { Suspense } from "react";
 import DashForm from "./components/ExpenseForm"
+import TopUpForm from "./components/TopUpForm"
+import AddCategoryForm from "./components/AddCategoryForm";
 
 export default async function Dashboard() {
   return (
@@ -493,22 +495,31 @@ export default async function Dashboard() {
 
 async function FetchDashboardData(){
   const { householdMember, monthlyCycle, categories } = await readSupaTables()
-  console.log("Household Member:", householdMember)
+  const householdId = householdMember?.household_id ?? ""
+  const currentCycleId = monthlyCycle?.id ?? ""
+  const createdBy = householdMember?.user_id ?? ""
 
   return (
     <div className="dashboard-box">
       <h1 className="text-2xl font-semibold">
         Welcome to Your Dashboard
       </h1>
-
+      {/* Expense Form */}
       <DashForm 
-        householdId={householdMember?.household_id ?? ""}
-        currentCycleId={monthlyCycle?.id ?? ""}
-        createdBy={householdMember?.user_id ?? ""}
-        categories={categories.map((cat) => ({ id: cat.id, name: cat.name }))}
-      
+           categories={categories.map(c => ({ id: c.id, name: c.name }))}
+            householdId={householdId}
+            currentCycleId={currentCycleId}
+            createdBy={createdBy}
       />
 
+      {/* Top-Up Form */}
+      <TopUpForm
+        householdId={householdId}
+        currentCycleId={currentCycleId}
+        createdBy={createdBy}
+      />
+
+      <AddCategoryForm householdId={householdId} />
 
 
       {householdMember ? (
