@@ -471,8 +471,9 @@
 //         </button>
 //       </form> */}
 
-import { readHouseTable } from "./queries";
+import { readSupaTables } from "./queries";
 import { Suspense } from "react";
+import DashForm from "./components/ExpenseForm"
 
 export default async function Dashboard() {
   return (
@@ -491,12 +492,25 @@ export default async function Dashboard() {
 }
 
 async function FetchDashboardData(){
-  const householdMember = await readHouseTable()
+  const { householdMember, monthlyCycle, categories } = await readSupaTables()
+  console.log("Household Member:", householdMember)
+
   return (
     <div className="dashboard-box">
       <h1 className="text-2xl font-semibold">
         Welcome to Your Dashboard
       </h1>
+
+      <DashForm 
+        householdId={householdMember?.household_id ?? ""}
+        currentCycleId={monthlyCycle?.id ?? ""}
+        createdBy={householdMember?.user_id ?? ""}
+        categories={categories.map((cat) => ({ id: cat.id, name: cat.name }))}
+      
+      />
+
+
+
       {householdMember ? (
         <div className="rounded-lg border p-4 shadow-sm">
           <h2 className="mb-3 text-lg font-medium">
