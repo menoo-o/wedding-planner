@@ -5,24 +5,25 @@ import { HouseholdMember, MonthlyCycle, Category } from '@/lib/types'
 
 
 export async function readSupaTables() {
-  // 1. This async call is 100% fine without Suspense
-  const supabase = await createClient();
+  const supabase = await createClient()
+
+  // 1. Auth
   const { data, error } = await supabase.auth.getClaims()
 
-  // Initialize variables to hold our data
+  if (error || !data?.claims?.sub) {
+    console.error("Error fetching user claims:", error)
+    redirect("/login")
+  }
+
+  // 2. Initialize shared state
   let householdMember: HouseholdMember | null = null
   let monthlyCycle: MonthlyCycle | null = null
   let categories: Category[] = []
 
-  // 2. If no user, redirect to login (also fine without Suspense)
-  if (error || !data?.claims) {
-     console.error('Error fetching user claims:', error);
-     redirect('/login');
-  }
+  let cashBalance = 0
+  let cardBalance = 0
 
-  // 3. If we have a user, fetch their household membership (also fine without Suspense)
-  if (data?.claims?.sub) {
-  // Fetch household membership for logged-in user
+  // 3. Household member
   const { data: memberData, error: memberError } = await supabase
     .from("household_members")
     .select("household_id, role, status, user_id")
@@ -30,35 +31,72 @@ export async function readSupaTables() {
     .eq("status", "active")
     .single<HouseholdMember>()
 
-    
-
-  if (memberError) {
+  if (memberError || !memberData) {
     console.error("Failed to fetch household member:", memberError)
-  } else {
-    householdMember = memberData
+
+    return {
+      householdMember: null,
+      monthlyCycle: null,
+      categories: [],
+      cash: 0,
+      card: 0,
+      total: 0,
+    }
   }
 
-  console.log(householdMember?.household_id)
-  // ///////////Read Monthly Cycle's Table/////////////////////////////////////
+  householdMember = memberData
+
+  // 4. Monthly cycle
   const { data: cycle, error: cycleError } = await supabase
     .from("monthly_cycles")
     .select("*")
-    .eq("household_id", memberData?.household_id)
+    .eq("household_id", memberData.household_id)
     .eq("is_closed", false)
     .single<MonthlyCycle>()
- 
-    if (cycleError) {
-      console.error("Failed to fetch monthly cycle:", cycleError)
-    } else {
-      monthlyCycle = cycle
-     
-    }
 
-    // ///////////Read Categories Table/////////////////////////////////////
-    const { data: categoriesData, error: categoriesError } = await supabase
+  if (cycleError) {
+    console.error("Failed to fetch monthly cycle:", cycleError)
+  } else {
+    monthlyCycle = cycle
+  }
+
+  const openingBalance = cycle?.opening_balance ?? 0
+
+  cashBalance = openingBalance
+
+  // 5. Transactions
+  if (cycle?.id) {
+    const { data: transactions } = await supabase
+      .from("transactions")
+      .select("amount, transaction_type, payment_account")
+      .eq("household_id", memberData.household_id)
+      .eq("cycle_id", cycle.id)
+
+    if (transactions) {
+      transactions.forEach((tx) => {
+        const amt = tx.amount
+
+       if (tx.transaction_type === "top_up" || tx.transaction_type === "loan_return") {
+        if (tx.payment_account === "cash") cashBalance += amt
+        if (tx.payment_account === "card") cardBalance += amt
+      } else if (tx.transaction_type === "expense" || tx.transaction_type === "settlement" || tx.transaction_type === "loan_out") {
+        if (tx.payment_account === "cash") cashBalance -= amt
+        if (tx.payment_account === "card") cardBalance -= amt
+      } 
+      // ⇄ Add your hybrid transfer logic here:
+      else if (tx.transaction_type === "transfer") {
+        if (tx.payment_account === "cash") cashBalance -= amt
+        if (tx.payment_account === "card") cardBalance += amt
+      }
+      })
+    }
+  }
+
+  // 6. Categories
+  const { data: categoriesData, error: categoriesError } = await supabase
     .from("categories")
     .select("*")
-    .eq("household_id", memberData?.household_id)
+    .eq("household_id", memberData.household_id)
     .overrideTypes<Category[]>()
 
   if (categoriesError) {
@@ -67,12 +105,13 @@ export async function readSupaTables() {
     categories = categoriesData ?? []
   }
 
-
-  }
-  // 4. Return the household member data (can be null if not found, but that's fine for Suspense)
+  // 7. Final return
   return {
     householdMember,
     monthlyCycle,
-    categories
-  } 
+    categories,
+    cash: cashBalance,
+    card: cardBalance,
+    total: cashBalance + cardBalance,
+  }
 }

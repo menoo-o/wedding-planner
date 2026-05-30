@@ -476,6 +476,7 @@ import { Suspense } from "react";
 import DashForm from "./components/ExpenseForm"
 import TopUpForm from "./components/TopUpForm"
 import AddCategoryForm from "./components/AddCategoryForm";
+import LiquidityWidget from "./components/liquidity-widget";
 
 export default async function Dashboard() {
   return (
@@ -494,10 +495,19 @@ export default async function Dashboard() {
 }
 
 async function FetchDashboardData(){
-  const { householdMember, monthlyCycle, categories } = await readSupaTables()
+  const {
+    householdMember,
+    monthlyCycle,
+    categories,
+    cash,
+    card,
+    total,
+  } = await readSupaTables()
+
   const householdId = householdMember?.household_id ?? ""
   const currentCycleId = monthlyCycle?.id ?? ""
   const createdBy = householdMember?.user_id ?? ""
+
 
   return (
     <div className="dashboard-box">
@@ -547,12 +557,39 @@ async function FetchDashboardData(){
           No active household membership found.
         </p> 
       )}
+    {/* section: Liquidity */}
+    <section>
+      <h2 className="text-lg font-medium">Liquidity</h2>
+      <div className="space-y-2">
+        <p>
+          <span className="font-medium">Cash Balance:</span> PKR {cash.toFixed(1)}
+        </p>
+        <p>
+          <span className="font-medium">Card Balance:</span> PKR {card.toFixed(1)}
+        </p>
+        <p>
+          <span className="font-medium">Total Balance:</span> PKR {total.toFixed(1)}
+        </p>
+      </div>
+    </section>
+{/* 🚀 Feeding the server calculated states directly as props */}
+      {currentCycleId ? (
+        <LiquidityWidget 
+          householdId={householdId} 
+          currentCycleId={currentCycleId}
+          createdBy={createdBy}
+          cash={cash}
+          card={card}
+          total={total}
+        />
+      ) : (
+        <div className="p-4 text-center border border-dashed rounded-xl bg-gray-50 text-xs text-gray-400">
+          No active financial ledger cycle found.
+        </div>
+      )}
     </div>
   )
 }
-
-
-
 
 function DashboardSkeleton() {
   return (
