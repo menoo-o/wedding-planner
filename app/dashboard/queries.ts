@@ -7,6 +7,7 @@ export interface CycleCalculationTransaction {
   amount: number
   transaction_type: "top_up" | "expense" | "transfer" | "loan_in" | "loan_out" | "loan_return" | "settlement" | "refund" | "adjustment"
   payment_account: "cash" | "card"
+  description: string // 🏆 Add this line right here!
   related_transaction_id: string | null
 }
 
@@ -83,10 +84,11 @@ export async function readSupaTables() {
     monthlyCycle = cycle
   }
 
-  // 🏆 SEED BALANCES: Seed the opening balance pool into the primary bank card pool
+  // 🏆 THE ADJUSTMENT: Seed the opening balance pool into CASH instead of CARD!
   const openingPool = cycle?.opening_balance ?? 0
-  cardBalance = openingPool
-
+  cashBalance = openingPool // 👈 CHANGE THIS LINE (Swap cardBalance to cashBalance)
+  cardBalance = 0          // 👈 RESET CARD TO ZERO HERE
+  
   // Most-recently closed cycle — used for historical burn rate fallback
   const { data: prevCycle } = await supabase
     .from("monthly_cycles")
@@ -97,18 +99,19 @@ export async function readSupaTables() {
     .limit(1)
 
   // ── 5. Parallel data fetch ────────────────────────────────
+  // ── 5. Parallel data fetch ────────────────────────────────
   const [currentTxResult, prevTxResult, categoriesResult, lifetimeDebtResult] = await Promise.all([
     // Current cycle transactions
     cycle?.id
       ? supabase
           .from("transactions")
-          // 🏆 FIXED: Explicitly selecting id and related_transaction_id
-          .select("id, amount, transaction_type, payment_account, related_transaction_id")
+          // 🏆 CHANGE THIS LINE: Added ", description" right into the selection parameters string!
+          .select("id, amount, transaction_type, payment_account, description, related_transaction_id")
           .eq("household_id", memberData.household_id)
           .eq("cycle_id", cycle.id)
       : Promise.resolve({ data: null }),
 
-    // Prior cycle expense totals
+    // Prior cycle expense totals (Leave as is!)
     prevCycle && prevCycle.length > 0
       ? supabase
           .from("transactions")
@@ -118,14 +121,14 @@ export async function readSupaTables() {
           .eq("transaction_type", "expense")
       : Promise.resolve({ data: null }),
 
-    // Household categories
+    // Household categories (Leave as is!)
     supabase
       .from("categories")
       .select("*")
       .eq("household_id", memberData.household_id)
       .overrideTypes<Category[]>(),
 
-    // 🏆 NEW: Fetch global debt entries across monthly limits to resolve active metrics
+    // Fetch global debt entries across monthly limits (Leave as is!)
     supabase
       .from("transactions")
       .select("id, amount, transaction_type, related_transaction_id")
@@ -136,7 +139,7 @@ export async function readSupaTables() {
   // ── 6. Compute balances, receivables, payables, burn ─────
   
   // Part A: Process Active Cycle Core Wallets & Inflows/Outflows
-  if (currentTxResult.data) {
+ if (currentTxResult.data) {
     const cycleTxs = currentTxResult.data as unknown as CycleCalculationTransaction[]
 
     cycleTxs.forEach((tx) => {
@@ -154,13 +157,20 @@ export async function readSupaTables() {
         
         if (tx.transaction_type === "expense") currentExpenses += amt
       }
-      // ⇄ 🏆 FIXED TRANSFER OPERATORS: Inflow record adds to target, outflow subtracts from source!
+      // ⇄ 🏆 DROP THIS REPLACED TRANSFER BLOCK HERE:
       else if (tx.transaction_type === "transfer") {
+        const textSignature = tx.description ? tx.description.toLowerCase() : ""
+        const isTransferIn = textSignature.includes("transfer in")
+        const isTransferOut = textSignature.includes("transfer out")
+
         if (tx.payment_account === "cash") {
-          cashBalance += amt // Money landing in cash adds to cash balance
+          if (isTransferIn) cashBalance += amt   // Money landed here -> adds to cash box
+          if (isTransferOut) cashBalance -= amt  // Money left here -> removes from cash box
         }
+        
         if (tx.payment_account === "card") {
-          cardBalance -= amt // Money leaving card deducts from card balance
+          if (isTransferIn) cardBalance += amt   // Money landed here -> adds to bank card
+          if (isTransferOut) cardBalance -= amt  // Money left here -> removes from bank card
         }
       }
     })
