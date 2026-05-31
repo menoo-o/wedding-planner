@@ -101,7 +101,7 @@ export default function LoanForm({ householdId, currentCycleId, createdBy, cashB
       amount: data.amount,
       counterparty_name: data.counterparty_name.trim(),
       description: data.description.trim() || `${data.loan_type === "loan_in" ? "Borrowed from" : "Lent to"} ${data.counterparty_name}`,
-      paid_by: "household",
+      paid_by: null,
       created_at: chosenDate.toISOString(), // 👈 OVERRIDING SUPABASE DEFAULT RULES
       category_id: null,
       notes: null,

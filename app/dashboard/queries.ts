@@ -2,12 +2,21 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { HouseholdMember, MonthlyCycle, Category } from '@/lib/types'
 
-// ─────────────────────────────────────────────────────────────
-// readSupaTables
-// Single server-side fetch that loads everything the dashboard
-// needs. Called once from layout.tsx and passed into the
-// DashboardProvider — no component makes its own Supabase calls.
-// ─────────────────────────────────────────────────────────────
+export interface CycleCalculationTransaction {
+  id: string
+  amount: number
+  transaction_type: "top_up" | "expense" | "transfer" | "loan_in" | "loan_out" | "loan_return" | "settlement" | "refund" | "adjustment"
+  payment_account: "cash" | "card"
+  related_transaction_id: string | null
+}
+
+export interface LifetimeDebtTransaction {
+  id: string
+  amount: number
+  transaction_type: "loan_in" | "loan_out" | "loan_return" | "settlement"
+  related_transaction_id: string | null
+}
+
 export async function readSupaTables() {
   const supabase = await createClient()
 
@@ -41,7 +50,6 @@ export async function readSupaTables() {
 
   if (memberError || !memberData) {
     console.error("Failed to fetch household member:", memberError)
-    // Return a safe empty shell — layout can show an onboarding state
     return {
       householdMember: null,
       monthlyCycle: null,
@@ -61,8 +69,7 @@ export async function readSupaTables() {
 
   householdMember = memberData
 
-  // ── 4. Active cycle + prior closed cycle (sequential — each ──
-  //       depends on household_id from step 3)                 
+  // ── 4. Active cycle + prior closed cycle ──────────────────                 
   const { data: cycle, error: cycleError } = await supabase
     .from("monthly_cycles")
     .select("*")
@@ -76,8 +83,9 @@ export async function readSupaTables() {
     monthlyCycle = cycle
   }
 
-  // Seed cash balance from the cycle's opening balance
-  cashBalance = cycle?.opening_balance ?? 0
+  // 🏆 SEED BALANCES: Seed the opening balance pool into the primary bank card pool
+  const openingPool = cycle?.opening_balance ?? 0
+  cardBalance = openingPool
 
   // Most-recently closed cycle — used for historical burn rate fallback
   const { data: prevCycle } = await supabase
@@ -88,22 +96,19 @@ export async function readSupaTables() {
     .order("created_at", { ascending: false })
     .limit(1)
 
-
-
-
   // ── 5. Parallel data fetch ────────────────────────────────
-  // All three queries are independent; fire them together.
-  const [currentTxResult, prevTxResult, categoriesResult] = await Promise.all([
-    // Current cycle transactions — full detail for balance + analytics
+  const [currentTxResult, prevTxResult, categoriesResult, lifetimeDebtResult] = await Promise.all([
+    // Current cycle transactions
     cycle?.id
       ? supabase
           .from("transactions")
-          .select("amount, transaction_type, payment_account")
+          // 🏆 FIXED: Explicitly selecting id and related_transaction_id
+          .select("id, amount, transaction_type, payment_account, related_transaction_id")
           .eq("household_id", memberData.household_id)
           .eq("cycle_id", cycle.id)
       : Promise.resolve({ data: null }),
 
-    // Prior cycle expense totals — used as burn rate fallback
+    // Prior cycle expense totals
     prevCycle && prevCycle.length > 0
       ? supabase
           .from("transactions")
@@ -113,59 +118,84 @@ export async function readSupaTables() {
           .eq("transaction_type", "expense")
       : Promise.resolve({ data: null }),
 
-    // Household categories — passed into the expense form
+    // Household categories
     supabase
       .from("categories")
       .select("*")
       .eq("household_id", memberData.household_id)
       .overrideTypes<Category[]>(),
+
+    // 🏆 NEW: Fetch global debt entries across monthly limits to resolve active metrics
+    supabase
+      .from("transactions")
+      .select("id, amount, transaction_type, related_transaction_id")
+      .eq("household_id", memberData.household_id)
+      .in("transaction_type", ["loan_out", "loan_in", "loan_return", "settlement"])
   ])
 
   // ── 6. Compute balances, receivables, payables, burn ─────
-if (currentTxResult.data) {
-  // 🏆 FIRST PASS: Gather all settlement linkages so we know what is paid off
-  const settledTransactionIds = new Set<string>()
   
-  currentTxResult.data.forEach((tx: any) => {
-    // If it's a return or settlement pointing back to an original loan, track it
-    if ((tx.transaction_type === "loan_return" || tx.transaction_type === "settlement") && tx.related_transaction_id) {
-      settledTransactionIds.add(tx.related_transaction_id)
-    }
-  })
+  // Part A: Process Active Cycle Core Wallets & Inflows/Outflows
+  if (currentTxResult.data) {
+    const cycleTxs = currentTxResult.data as unknown as CycleCalculationTransaction[]
 
-  // 🏆 SECOND PASS: Process liquidity states and sum ONLY ACTIVE loans
-  currentTxResult.data.forEach((tx: any) => {
-    const amt = tx.amount
+    cycleTxs.forEach((tx) => {
+      const amt = tx.amount
 
-    // Core Liquidity Inflows
-    if (tx.transaction_type === "top_up" || tx.transaction_type === "loan_return" || tx.transaction_type === "loan_in") {
-      if (tx.payment_account === "cash") cashBalance += amt
-      if (tx.payment_account === "card") cardBalance += amt
-    } 
-    // Core Liquidity Outflows
-    else if (tx.transaction_type === "expense" || tx.transaction_type === "settlement" || tx.transaction_type === "loan_out") {
-      if (tx.payment_account === "cash") cashBalance -= amt
-      if (tx.payment_account === "card") cardBalance -= amt
-      
-      if (tx.transaction_type === "expense") currentExpenses += amt
-    }
-    // Internal Vault Transfers
-    else if (tx.transaction_type === "transfer") {
-      if (tx.payment_account === "cash") cashBalance -= amt
-      if (tx.payment_account === "card") cardBalance += amt
-    }
-
-    // 🏆 PENDING LOANS INTELLIGENCE: Only add to dashboard metrics if NOT settled!
-    if (!settledTransactionIds.has(tx.id)) {
-      if (tx.transaction_type === "loan_out") {
-        receivables += amt // Capital you lent out that is still missing
+      // Core Liquidity Inflows
+      if (tx.transaction_type === "top_up" || tx.transaction_type === "loan_return" || tx.transaction_type === "loan_in") {
+        if (tx.payment_account === "cash") cashBalance += amt
+        if (tx.payment_account === "card") cardBalance += amt
+      } 
+      // Core Liquidity Outflows
+      else if (tx.transaction_type === "expense" || tx.transaction_type === "settlement" || tx.transaction_type === "loan_out") {
+        if (tx.payment_account === "cash") cashBalance -= amt
+        if (tx.payment_account === "card") cardBalance -= amt
+        
+        if (tx.transaction_type === "expense") currentExpenses += amt
       }
-      if (tx.transaction_type === "loan_in") {
-        payables += amt    // Capital you borrowed that you still owe out
+      // ⇄ 🏆 FIXED TRANSFER OPERATORS: Inflow record adds to target, outflow subtracts from source!
+      else if (tx.transaction_type === "transfer") {
+        if (tx.payment_account === "cash") {
+          cashBalance += amt // Money landing in cash adds to cash balance
+        }
+        if (tx.payment_account === "card") {
+          cardBalance -= amt // Money leaving card deducts from card balance
+        }
       }
-    }
-  })
-}
+    })
+  }
+
+  // Part B: Process Lifetime Debt Impact on Advanced Metric Aggregations
+  if (lifetimeDebtResult.data) {
+    const historicalTxs = lifetimeDebtResult.data as unknown as LifetimeDebtTransaction[]
+    const resolvedDebtIds = new Set<string>()
+
+    // PASS 1: Identify settled debt rows globally
+    historicalTxs.forEach((tx) => {
+      if (
+        (tx.transaction_type === "loan_return" || tx.transaction_type === "settlement") && 
+        tx.related_transaction_id
+      ) {
+        resolvedDebtIds.add(String(tx.related_transaction_id))
+      }
+    })
+
+    // PASS 2: Accumulate metrics solely for records that are genuinely still active
+    historicalTxs.forEach((tx) => {
+      const currentTxId = String(tx.id)
+
+      if (!resolvedDebtIds.has(currentTxId)) {
+        if (tx.transaction_type === "loan_out") {
+          receivables += tx.amount
+        }
+        if (tx.transaction_type === "loan_in") {
+          payables += tx.amount
+        }
+      }
+    })
+  }
+
   // Sum prior-cycle expenses for the burn rate fallback
   if (prevTxResult.data) {
     prevTxResult.data.forEach((tx) => {
@@ -173,7 +203,7 @@ if (currentTxResult.data) {
     })
   }
 
-  // Assign categories (already fetched in the parallel block above)
+  // Assign categories
   if (!categoriesResult.error && categoriesResult.data) {
     categories = categoriesResult.data
   } else if (categoriesResult.error) {
@@ -184,15 +214,11 @@ if (currentTxResult.data) {
   const totalLiquidity = cashBalance + cardBalance
   const netDebt = receivables - payables
 
-  // Runway = how many "current cycles" of spending the balance can cover.
-  // Falls back to prior-cycle burn if this cycle has no expenses yet.
   const burnDenominator =
     currentExpenses > 0 ? currentExpenses :
     previousExpenses > 0 ? previousExpenses : 0
   const runway = burnDenominator > 0 ? totalLiquidity / burnDenominator : Infinity
 
-  // Debt load ratio = outstanding payables as % of liquid assets.
-  // Clamped to 100 if assets are zero but debt exists.
   const debtLoadRatio =
     totalLiquidity > 0
       ? (payables / totalLiquidity) * 100
@@ -213,21 +239,13 @@ if (currentTxResult.data) {
     previousExpenses,
     runway,
     debtLoadRatio,
-    
   }
 }
 
-
-// app/dashboard/queries.ts
-
-// app/dashboard/queries.ts
-
-// app/dashboard/queries.ts
-
+// 🏆 ACTIVE RECEIVABLES SELECTION UTILITY ENGINE
 export async function getActiveReceivables(householdId: string, cycleId: string) {
   const supabase = await createClient()
 
-  // 1. Pull ALL loans out and loan returns for this cycle to map connections in memory
   const { data: records, error } = await supabase
     .from("transactions")
     .select("id, amount, transaction_type, payment_account, counterparty_name, description, created_at, notes, related_transaction_id")
@@ -242,16 +260,14 @@ export async function getActiveReceivables(householdId: string, cycleId: string)
 
   if (!records) return []
 
-  // 2. Build a set of all transaction IDs that have already received a repayment
   const settledLoanIds = new Set(
     records
       .filter((tx) => tx.transaction_type === "loan_return" && tx.related_transaction_id)
-      .map((tx) => tx.related_transaction_id)
+      .map((tx) => String(tx.related_transaction_id))
   )
 
-  // 3. One-Shot Filtering: Only return 'loan_out' rows whose IDs are NOT in the settled set
   const activeLoans = records
-    .filter((tx) => tx.transaction_type === "loan_out" && !settledLoanIds.has(tx.id))
+    .filter((tx) => tx.transaction_type === "loan_out" && !settledLoanIds.has(String(tx.id)))
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   return activeLoans
