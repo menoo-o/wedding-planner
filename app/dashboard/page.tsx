@@ -1,4 +1,4 @@
-import { getActiveReceivables, readSupaTables } from "./queries";
+// import { getActiveReceivables, readSupaTables } from "./queries";
 import { Suspense } from "react";
 import DashForm from "./components/ExpenseForm"
 import TopUpForm from "./components/TopUpForm"
@@ -8,6 +8,9 @@ import LoanForm from "./components/LoanForm" // Import your new unified loan eng
 import AdvancedMetrics from "./components/AdvancedMetrics"
 import ReceivablesList from "./components/ReceivablesList"
 import RecentExpenses from "./components/expenses/Activity"
+
+import { getDashboardData } from './_services/dashboard'
+import { getActiveReceivables } from "@/app/dashboard/_db/transactions"
 
 export default async function Dashboard() {
   return (
@@ -32,7 +35,7 @@ async function FetchDashboardData() {
     receivables, payables, netDebt,
     currentExpenses, previousExpenses, runway, debtLoadRatio, 
     rawTransactions 
-  } = await readSupaTables()
+  } = await getDashboardData()
 
   const householdId = householdMember?.household_id ?? ""
   const currentCycleId = monthlyCycle?.id ?? ""

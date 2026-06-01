@@ -49,3 +49,38 @@ export type Category = {
   household_id: string
   name: string
 }
+
+export interface CycleCalculationTransaction {
+  id: string
+  amount: number
+  transaction_type: "top_up" | "expense" | "transfer" | "loan_in" | "loan_out" | "loan_return" | "settlement" | "refund" | "adjustment"
+  payment_account: "cash" | "card"
+  description: string
+  related_transaction_id: string | null
+  category_id: string | null
+  created_at: string | null
+}
+ 
+export interface LifetimeDebtTransaction {
+  id: string
+  amount: number
+  transaction_type: "loan_in" | "loan_out" | "loan_return" | "settlement"
+  related_transaction_id: string | null
+}
+ 
+export interface DashboardData {
+  householdMember: HouseholdMember | null
+  monthlyCycle: MonthlyCycle | null
+  categories: Category[]
+  cash: number
+  card: number
+  total: number
+  receivables: number
+  payables: number
+  netDebt: number
+  currentExpenses: number
+  previousExpenses: number
+  runway: number
+  debtLoadRatio: number
+  rawTransactions: CycleCalculationTransaction[]
+}
