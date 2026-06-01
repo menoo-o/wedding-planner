@@ -7,7 +7,7 @@ export default function Home() {
       {/* <CountdownTimer /> */}
       
       <Link href="/dashboard" className="text-blue-500 underline">
-        Go to Dashboard
+        Go to Dashboard Page 
       </Link>
     </>
   );
