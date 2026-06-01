@@ -34,7 +34,7 @@ export default function RecentExpenses({ transactions = [], currentExpensesTotal
     setActiveMobileId(activeMobileId === id ? null : id)
   }
 
-  console.log("🔴 RecentExpenses Received Transactions:", transactions)
+  
   return (
     <div className="recent-expenses-container" style={{
       background: '#fff',

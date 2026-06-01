@@ -1,3 +1,5 @@
+//app/dashboard/queries.ts
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { HouseholdMember, MonthlyCycle, Category } from '@/lib/types'
