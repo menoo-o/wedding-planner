@@ -108,6 +108,26 @@ async function FetchDashboardData(){
         runway={runway}                 // Survival months remaining based on burn rate
         debtLoadRatio={debtLoadRatio}   // Financial stress % score (Payables / Liquidity)
       />
+
+
+
+{currentCycleId ? (
+        <LiquidityWidget 
+          householdId={householdId} 
+          currentCycleId={currentCycleId}
+          createdBy={createdBy}
+          cash={cash}
+          card={card}
+          total={total}
+        />
+      ) : (
+        <div className="p-4 text-center border border-dashed rounded-xl bg-gray-50 text-xs text-gray-400">
+          No active financial ledger cycle found.
+        </div>
+      )}
+
+
+
           <ReceivablesList 
           records={receivablesRecords} 
           householdId={householdId}
@@ -130,20 +150,8 @@ async function FetchDashboardData(){
       </div>
     </section> */}
 {/* 🚀 Feeding the server calculated states directly as props */}
-      {currentCycleId ? (
-        <LiquidityWidget 
-          householdId={householdId} 
-          currentCycleId={currentCycleId}
-          createdBy={createdBy}
-          cash={cash}
-          card={card}
-          total={total}
-        />
-      ) : (
-        <div className="p-4 text-center border border-dashed rounded-xl bg-gray-50 text-xs text-gray-400">
-          No active financial ledger cycle found.
-        </div>
-      )}
+      
+
     </div>
   )
 }
