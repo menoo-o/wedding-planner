@@ -67,7 +67,7 @@ export default function ReceivablesList({ records, householdId, currentCycleId, 
           counterparty_name: originalLoan.counterparty_name,
           description: `Settlement: Collected full loan back from ${originalLoan.counterparty_name}`,
           notes: `Linked to original loan ID: ${originalLoan.id}`,
-          paid_by: "household",
+          paid_by: null,
           category_id: null,
           related_transaction_id: originalLoan.id // 🔗 CRITICAL LINK KEY ASSIGNMENT
         })
