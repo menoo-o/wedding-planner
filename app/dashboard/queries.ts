@@ -7,8 +7,10 @@ export interface CycleCalculationTransaction {
   amount: number
   transaction_type: "top_up" | "expense" | "transfer" | "loan_in" | "loan_out" | "loan_return" | "settlement" | "refund" | "adjustment"
   payment_account: "cash" | "card"
-  description: string // 🏆 Add this line right here!
+  description: string 
   related_transaction_id: string | null
+  category_id: string | null // 🏆 Add this line right here!
+  created_at: string | null
 }
 
 export interface LifetimeDebtTransaction {
@@ -65,6 +67,7 @@ export async function readSupaTables() {
       previousExpenses: 0,
       runway: Infinity,
       debtLoadRatio: 0,
+      rawTransactions: [] // 🏆 CRITICAL: Ensure this fallback is here!
     }
   }
 
@@ -106,7 +109,7 @@ export async function readSupaTables() {
       ? supabase
           .from("transactions")
           // 🏆 CHANGE THIS LINE: Added ", description" right into the selection parameters string!
-          .select("id, amount, transaction_type, payment_account, description, related_transaction_id")
+          .select("id, amount, transaction_type, payment_account, description, related_transaction_id, category_id, created_at, notes")
           .eq("household_id", memberData.household_id)
           .eq("cycle_id", cycle.id)
       : Promise.resolve({ data: null }),
@@ -249,7 +252,10 @@ export async function readSupaTables() {
     previousExpenses,
     runway,
     debtLoadRatio,
+   // 🏆 FIXED: Casts the current transaction rows perfectly to your defined Interface
+    rawTransactions:  (currentTxResult.data as unknown as CycleCalculationTransaction[]) || []
   }
+  
 }
 
 // 🏆 ACTIVE RECEIVABLES SELECTION UTILITY ENGINE

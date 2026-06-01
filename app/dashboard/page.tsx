@@ -7,6 +7,7 @@ import LiquidityWidget from "./components/liquidity-widget";
 import LoanForm from "./components/LoanForm" // Import your new unified loan engine
 import AdvancedMetrics from "./components/AdvancedMetrics"
 import ReceivablesList from "./components/ReceivablesList"
+import RecentExpenses from "./components/expenses/Activity"
 
 export default async function Dashboard() {
   return (
@@ -24,21 +25,37 @@ export default async function Dashboard() {
   )
 }
 
-async function FetchDashboardData(){
- const { 
+async function FetchDashboardData() {
+  const { 
     householdMember, monthlyCycle, categories, 
     cash, card, total,
     receivables, payables, netDebt,
     currentExpenses, previousExpenses, runway, debtLoadRatio, 
+    rawTransactions 
   } = await readSupaTables()
 
   const householdId = householdMember?.household_id ?? ""
   const currentCycleId = monthlyCycle?.id ?? ""
   const createdBy = householdMember?.user_id ?? ""
 
-  
-  // 1. Fetch the cycle's targeted lending entries concurrently via server query
+  // Fetch the cycle's targeted lending entries concurrently via server query
   const receivablesRecords = await getActiveReceivables(householdId, currentCycleId)
+
+  // 1. Filter out only expense rows
+const rawExpenses = (rawTransactions || []).filter(
+  (tx) => tx.transaction_type === "expense"
+)
+
+// 2. Map through expenses and dynamically attach the matching category name
+const expensesWithCategoryNames = rawExpenses.map((tx) => {
+  const matchingCategory = categories.find((cat) => cat.id === tx.category_id)
+  
+  return {
+    ...tx,
+    // If a match is found, assign its name; otherwise fallback to "General"
+    category_name: matchingCategory ? matchingCategory.name : "General" 
+  }
+})
 
   return (
     <div className="dashboard-box">
@@ -99,6 +116,12 @@ async function FetchDashboardData(){
         </p> 
       )}
 
+       <RecentExpenses 
+        transactions={expensesWithCategoryNames} 
+        currentExpensesTotal={currentExpenses} // Directly feed the server calculated current cycle expenses total for display in the card header
+      />
+
+     
       <AdvancedMetrics 
         receivables={receivables}       // Active money owed to you right now
         payables={payables}             // Active money you owe out right now
@@ -108,6 +131,8 @@ async function FetchDashboardData(){
         runway={runway}                 // Survival months remaining based on burn rate
         debtLoadRatio={debtLoadRatio}   // Financial stress % score (Payables / Liquidity)
       />
+
+      
 
 
 
