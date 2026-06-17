@@ -26,6 +26,8 @@ const EMPTY_DASHBOARD: DashboardData = {
   runway: Infinity,
   debtLoadRatio: 0,
   rawTransactions: [],
+  payablesRecords: [],
+  receivablesRecords: [],
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
@@ -88,5 +90,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     runway,
     debtLoadRatio,
     rawTransactions: currentTxs,
+    payablesRecords: [],
+    receivablesRecords: [],
   }
 }

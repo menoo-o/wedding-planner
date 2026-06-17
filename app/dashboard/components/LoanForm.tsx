@@ -13,7 +13,7 @@ type LoanFormData = {
   created_by: string
   loan_type: "loan_in" | "loan_out"
   amount: number
-  payment_account: "cash" | "card"
+  payment_account: "cash" | "card" | "personal"
   counterparty_name: string
   description: string
   transaction_date: string // 👈 NEW: Form date tracking key

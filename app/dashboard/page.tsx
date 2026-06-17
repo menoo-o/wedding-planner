@@ -8,6 +8,7 @@ import LoanForm from "./components/LoanForm" // Import your new unified loan eng
 import AdvancedMetrics from "./components/AdvancedMetrics"
 import ReceivablesList from "./components/ReceivablesList"
 import RecentExpenses from "./components/expenses/Activity"
+import Link from "next/link";
 
 import { getDashboardData } from './_services/dashboard'
 import { getActiveReceivables } from "@/app/dashboard/_db/transactions"
@@ -28,7 +29,7 @@ export default async function Dashboard() {
   )
 }
 
-async function FetchDashboardData() {
+export async function FetchDashboardData() {
   const { 
     householdMember, monthlyCycle, categories, 
     cash, card, total,
@@ -66,6 +67,13 @@ const expensesWithCategoryNames = rawExpenses.map((tx) => {
         Welcome to Your Dashboard
       </h1>
       {/* Expense Form */}
+
+     <span>
+      <Link href="/dashboard/debts" className="text-blue-500 underline">
+        View Detailed Debts Page{"\u00A0"}
+      </Link>
+     </span>
+
       <DashForm 
            categories={categories.map(c => ({ id: c.id, name: c.name }))}
             householdId={householdId}
@@ -124,7 +132,8 @@ const expensesWithCategoryNames = rawExpenses.map((tx) => {
         currentExpensesTotal={currentExpenses} // Directly feed the server calculated current cycle expenses total for display in the card header
       />
 
-     
+
+
       <AdvancedMetrics 
         receivables={receivables}       // Active money owed to you right now
         payables={payables}             // Active money you owe out right now
@@ -154,14 +163,17 @@ const expensesWithCategoryNames = rawExpenses.map((tx) => {
         </div>
       )}
 
-
-
-          <ReceivablesList 
-          records={receivablesRecords} 
-          householdId={householdId}
-          currentCycleId={currentCycleId}
-          createdBy={createdBy}
+       <ReceivablesList 
+            records={receivablesRecords} 
+            householdId={householdId}
+            currentCycleId={currentCycleId}
+            createdBy={createdBy}
           />
+     
+
+
+
+         
     {/* section: Liquidity */}
     {/* <section>
       <h2 className="text-lg font-medium">Liquidity</h2>
