@@ -1,7 +1,7 @@
 // app/dashboard/debts/MoneyManagerView.tsx
 "use client"
 
-import { useMemo, useState } from "react"
+import { JSX, useMemo, useState, type ReactNode } from "react"
 import Link from "next/link"
 import "./debts.css"
 
@@ -52,6 +52,9 @@ interface MoneyManagerViewProps {
   receivables: LedgerItem[]
   payables: LedgerItem[]
   reimbursements: LedgerItem[]
+  settledReceivables: LedgerItem[]
+  settledPayables: LedgerItem[]
+  settledReimbursements: LedgerItem[]
   history: HistoryItem[]
   chartData: ChartBucket[]
   latestEntry: HistoryItem | null
@@ -97,6 +100,9 @@ export default function MoneyManagerView({
   receivables,
   payables,
   reimbursements,
+  settledReceivables,
+  settledPayables,
+  settledReimbursements,
   history,
   chartData,
   latestEntry,
@@ -104,6 +110,13 @@ export default function MoneyManagerView({
   const [activeTab, setActiveTab] = useState<TabKey>("overview")
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | LedgerStatus>("all")
+  const [showHistory, setShowHistory] = useState(false)
+
+  const handleTabChange = (tab: TabKey) => {
+    setActiveTab(tab)
+    setStatusFilter("all")
+    setShowHistory(false)
+  }
 
   // ── Build the merged Overview feed (unsettled items first, newest first) ──
   const overviewItems = useMemo(() => {
@@ -116,26 +129,15 @@ export default function MoneyManagerView({
     })
   }, [receivables, payables, reimbursements])
 
-  const tabSource: Record<TabKey, LedgerItem[]> = {
-    overview: overviewItems,
-    receivables,
-    payables,
-    reimbursements,
-    history: [], // history uses its own renderer
-  }
+  // ── Settled history, grouped the same way as the active tabs ───
+  const settledOverviewItems = useMemo(() => {
+    const merged = [...settledReceivables, ...settledPayables, ...settledReimbursements]
+    return merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [settledReceivables, settledPayables, settledReimbursements])
+
+
 
   // ── Apply search + status filter to the active ledger tab ──────
-  const filteredLedger = useMemo(() => {
-    if (activeTab === "history") return []
-    return tabSource[activeTab].filter((item) => {
-      const matchesSearch =
-        search.trim() === "" ||
-        item.partyName.toLowerCase().includes(search.toLowerCase()) ||
-        item.description.toLowerCase().includes(search.toLowerCase())
-      const matchesStatus = statusFilter === "all" || item.status === statusFilter
-      return matchesSearch && matchesStatus
-    })
-  }, [activeTab, tabSource, search, statusFilter])
 
   const filteredHistory = useMemo(() => {
     if (activeTab !== "history") return []
@@ -148,6 +150,70 @@ export default function MoneyManagerView({
     )
   }, [activeTab, history, search])
 
+  // Settled rows for the active tab, search-filtered the same way —
+  const filteredLedger = useMemo(() => {
+  const tabSource: Record<TabKey, LedgerItem[]> = {
+    overview: overviewItems,
+    receivables,
+    payables,
+    reimbursements,
+    history: [],
+  }
+
+  if (activeTab === "history") return []
+
+  return tabSource[activeTab].filter((item) => {
+    const matchesSearch =
+      search.trim() === "" ||
+      item.partyName.toLowerCase().includes(search.toLowerCase()) ||
+      item.description.toLowerCase().includes(search.toLowerCase())
+
+    const matchesStatus =
+      statusFilter === "all" || item.status === statusFilter
+
+    return matchesSearch && matchesStatus
+  })
+}, [
+  activeTab,
+  search,
+  statusFilter,
+  overviewItems,
+  receivables,
+  payables,
+  reimbursements,
+])
+  // status filter doesn't apply here since these are inherently settled.
+const filteredSettled = useMemo(() => {
+  const settledSource: Record<TabKey, LedgerItem[]> = {
+    overview: settledOverviewItems,
+    receivables: settledReceivables,
+    payables: settledPayables,
+    reimbursements: settledReimbursements,
+    history: [],
+  }
+
+  if (activeTab === "history") return []
+
+  return settledSource[activeTab].filter(
+    (item) =>
+      search.trim() === "" ||
+      item.partyName.toLowerCase().includes(search.toLowerCase()) ||
+      item.description.toLowerCase().includes(search.toLowerCase())
+  )
+}, [
+  activeTab,
+  search,
+  settledOverviewItems,
+  settledReceivables,
+  settledPayables,
+  settledReimbursements,
+])
+
+  // What the table actually renders: active rows normally, or settled
+  // rows once the user has clicked "See Past History" for this tab.
+  const rowsToShow = showHistory ? filteredSettled : filteredLedger
+  const canShowHistoryButton = !showHistory && filteredLedger.length === 0 && filteredSettled.length > 0
+
   const handleExport = () => {
     if (activeTab === "history") {
       downloadCsv(
@@ -159,8 +225,8 @@ export default function MoneyManagerView({
       )
     } else {
       downloadCsv(
-        `${activeTab}.csv`,
-        filteredLedger.map((i) => ({
+        `${activeTab}${showHistory ? "-history" : ""}.csv`,
+        rowsToShow.map((i) => ({
           date: fmtDate(i.date), party: i.partyName, description: i.description,
           status: i.status, amount: i.amount, remaining: i.remaining,
         }))
@@ -292,7 +358,7 @@ export default function MoneyManagerView({
                   key={tab}
                   type="button"
                   className={`mm-tab ${activeTab === tab ? "mm-tab--active" : ""}`}
-                  onClick={() => { setActiveTab(tab); setStatusFilter("all") }}
+                  onClick={() => handleTabChange(tab)}
                 >
                   {capitalize(tab)}
                 </button>
@@ -326,7 +392,29 @@ export default function MoneyManagerView({
             {activeTab === "history" ? (
               <HistoryTable rows={filteredHistory} />
             ) : (
-              <LedgerTable rows={filteredLedger} showKind={activeTab === "overview"} />
+              <>
+                {showHistory && (
+                  <div className="mm-history-banner">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/>
+                    </svg>
+                    <span>Showing settled {activeTab === "overview" ? "history" : activeTab} for this cycle.</span>
+                    <button type="button" onClick={() => setShowHistory(false)}>Back to active</button>
+                  </div>
+                )}
+                <LedgerTable
+                  rows={rowsToShow}
+                  showKind={activeTab === "overview"}
+                  emptyAction={
+                    canShowHistoryButton ? (
+                      <button type="button" className="mm-history-btn" onClick={() => setShowHistory(true)}>
+                        See Past History
+                      </button>
+                    ) : null
+                  }
+                />
+              </>
             )}
           </div>
         </section>
@@ -338,11 +426,11 @@ export default function MoneyManagerView({
               {chartData.length === 0 ? (
                 <p className="mm-chart-empty">No expense activity yet this cycle.</p>
               ) : (
-             chartData.map((bucket, index) => (
-              <div
-                className="mm-chart-col"
-                key={`${bucket.label}-${index}`}
-              >
+              chartData.map((bucket, index) => (
+                <div
+                  className="mm-chart-col"
+                  key={`${bucket.label}-${index}`}
+                >
                     <div
                       className={`mm-chart-bar ${bucket.value === maxChartValue ? "mm-chart-bar--peak" : ""}`}
                       style={{ height: `${Math.max(6, (bucket.value / maxChartValue) * 100)}%` }}
@@ -403,7 +491,7 @@ export default function MoneyManagerView({
                 </div>
               </li>
             </ul>
-            <button type="button" className="mm-audit-btn" onClick={() => setActiveTab("history")}>
+            <button type="button" className="mm-audit-btn" onClick={() => handleTabChange("history")}>
               View Full History
             </button>
           </div>
@@ -444,9 +532,16 @@ function StatusBadge({ status }: { status: LedgerStatus }) {
   return <span className={`mm-status mm-status--${status}`}>{capitalize(status)}</span>
 }
 
-function LedgerTable({ rows, showKind }: { rows: LedgerItem[]; showKind: boolean }) {
+function LedgerTable({
+  rows, showKind, emptyAction,
+}: { rows: LedgerItem[]; showKind: boolean; emptyAction?: ReactNode }) {
   if (rows.length === 0) {
-    return <div className="mm-empty">No matching records for this view.</div>
+    return (
+      <div className="mm-empty">
+        <p>No matching records for this view.</p>
+        {emptyAction}
+      </div>
+    )
   }
   return (
     <table className="mm-table">
@@ -535,8 +630,9 @@ function NavIcon({ name }: { name: "dashboard" | "ledger" | "members" | "insight
 
 // ── Small utils ──────────────────────────────────────────────
 
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1)
+function capitalize(s?: string | null) {
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function kindLabel(kind: LedgerItem["kind"]) {

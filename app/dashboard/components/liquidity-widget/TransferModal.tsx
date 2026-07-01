@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form"
 import { createClient } from "@/utils/supabase/client"
 import { useState } from "react"
 
+// ... existing code ...
 type TransferFormData = {
   amount: number
   source_wallet: "cash" | "card"
@@ -19,7 +20,6 @@ interface TransferModalProps {
   householdId: string
   currentCycleId: string
   createdBy?: string
-  // INJECT CURRENT BALANCE LIMITS FOR LIVE VALIDATION
   cashBalance: number
   cardBalance: number
 }
@@ -44,7 +44,7 @@ export default function TransferModal({
     reset,
     formState: { errors, isSubmitting },
   } = useForm<TransferFormData>({
-    mode: "onChange", // ⚡ CRITICAL: Tells RHF to run validation rules live on every keystroke!
+    mode: "onChange",
     defaultValues: {
       amount: undefined,
       source_wallet: "cash",
@@ -55,7 +55,6 @@ export default function TransferModal({
   const fromWallet = watch("source_wallet")
   const toWallet = fromWallet === "cash" ? "card" : "cash"
 
-  // Dynamically determine the maximum allowed ceiling based on what wallet is currently selected
   const availableCeiling = fromWallet === "cash" ? cashBalance : cardBalance
 
   if (!isOpen) return null
@@ -63,7 +62,6 @@ export default function TransferModal({
   async function onSubmit(data: TransferFormData) {
     setWriteError(null)
     
-    // Safety check for missing system data context
     if (!householdId || !currentCycleId || !createdBy) {
       setWriteError("Missing structural ledger references. Please reload.")
       return
@@ -78,7 +76,7 @@ export default function TransferModal({
         cycle_id: currentCycleId,
         created_by: createdBy,
         transaction_type: "transfer",       
-        payment_account: data.source_wallet, 
+        payment_account: data.source_wallet, // <-- Directly insert 'card' or 'cash'
         amount: data.amount,
         description: `Transfer out to ${toWallet.toUpperCase()}`,
         notes: customReason,
@@ -91,7 +89,7 @@ export default function TransferModal({
         cycle_id: currentCycleId,
         created_by: createdBy,
         transaction_type: "transfer",       
-        payment_account: toWallet,          
+        payment_account: toWallet,          // <-- Directly insert 'card' or 'cash'
         amount: data.amount,
         description: `Transfer in from ${data.source_wallet.toUpperCase()}`,
         notes: customReason,
@@ -100,8 +98,8 @@ export default function TransferModal({
         category_id: null,
       }
     ]
-    // One single network trip directly to Supabase — zero hosting server compute billed!
-  const { error } = await supabase
+
+    const { error } = await supabase
       .from("transactions")
       .insert(batchPayload)
 
@@ -114,9 +112,8 @@ export default function TransferModal({
     onClose()
     onSuccess()
   }
-
- return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fadeIn">
+ 
+ return (    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fadeIn">
       <div className="bg-white rounded-xl max-w-sm w-full shadow-2xl p-5 relative border border-gray-100">
         
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-sm">✕</button>

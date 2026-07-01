@@ -1,7 +1,7 @@
 // app/dashboard/debts/page.tsx
 import { Suspense } from "react"
 import { getDashboardData } from "@/app/dashboard/_services/dashboard"
-import { getActiveReceivables, getActivePayables } from "@/app/dashboard/_db/transactions"
+import { getReceivablesLedger, getPayablesLedger } from "@/app/dashboard/_db/transactions"
 import MoneyManagerView, {
   type LedgerItem,
   type HistoryItem,
@@ -37,20 +37,25 @@ async function FetchMoneyManagerData() {
   const householdId = householdMember.household_id
   const currentCycleId = monthlyCycle?.id ?? ""
 
-  // ── Fetch receivables + payables in parallel ─────────────────
-  const [receivablesRecords, payablesData] = await Promise.all([
-    getActiveReceivables(householdId, currentCycleId),
-    getActivePayables(householdId),
+  // ── Fetch receivables + payables ledgers in parallel ──────────
+  // Each returns { active, settled } from a single DB query —
+  // settled rows power the "See Past History" button instead of
+  // a second round-trip when the user asks for them.
+  const [receivablesLedger, payablesLedger] = await Promise.all([
+    getReceivablesLedger(householdId, currentCycleId),
+    getPayablesLedger(householdId),
   ])
 
-  // payablesData mixes two concerns — split by transaction_type:
+  // payablesLedger mixes two concerns — split by transaction_type:
   // loan_in rows are true "payables" (you borrowed cash),
-  // expense rows are "reimbursements" (someone else paid a bill for you).
-  const payablesLoans   = payablesData.filter((p) => p.transaction_type === "loan_in")
-  const reimbursements  = payablesData.filter((p) => p.transaction_type === "expense")
+  // expense rows (paid_by === "other") are "reimbursements".
+  const payablesLoansActive   = payablesLedger.active.filter((p) => p.transaction_type === "loan_in")
+  const payablesLoansSettled  = payablesLedger.settled.filter((p) => p.transaction_type === "loan_in")
+  const reimbursementsActive  = payablesLedger.active.filter((p) => p.transaction_type === "expense")
+  const reimbursementsSettled = payablesLedger.settled.filter((p) => p.transaction_type === "expense")
 
-  // ── Normalize each bucket into a common LedgerItem shape ─────
-  const receivableItems: LedgerItem[] = receivablesRecords.map((r) => ({
+  // ── Normalize into the common LedgerItem shape ────────────────
+  const toReceivableItem = (r: typeof receivablesLedger.active[number]): LedgerItem => ({
     id: r.id,
     partyName: r.counterparty_name ?? "Unknown",
     description: r.description ?? "Lent funds",
@@ -59,9 +64,9 @@ async function FetchMoneyManagerData() {
     date: r.created_at,
     status: r.loan_status,
     kind: "receivable",
-  }))
+  })
 
-  const payableItems: LedgerItem[] = payablesLoans.map((p) => ({
+  const toPayableItem = (p: typeof payablesLoansActive[number]): LedgerItem => ({
     id: p.id,
     partyName: p.counterparty_name ?? "Unknown",
     description: p.description ?? "Borrowed funds",
@@ -70,9 +75,9 @@ async function FetchMoneyManagerData() {
     date: p.created_at,
     status: p.loan_status ?? "pending",
     kind: "payable",
-  }))
+  })
 
-  const reimbursementItems: LedgerItem[] = reimbursements.map((p) => ({
+  const toReimbursementItem = (p: typeof reimbursementsActive[number]): LedgerItem => ({
     id: p.id,
     partyName: p.counterparty_name ?? "Unknown",
     description: p.description ?? "Paid expense",
@@ -81,7 +86,15 @@ async function FetchMoneyManagerData() {
     date: p.created_at,
     status: p.reimbursement_status ?? "pending",
     kind: "reimbursement",
-  }))
+  })
+
+  const receivableItems    = receivablesLedger.active.map(toReceivableItem)
+  const payableItems       = payablesLoansActive.map(toPayableItem)
+  const reimbursementItems = reimbursementsActive.map(toReimbursementItem)
+
+  const settledReceivableItems    = receivablesLedger.settled.map(toReceivableItem)
+  const settledPayableItems       = payablesLoansSettled.map(toPayableItem)
+  const settledReimbursementItems = reimbursementsSettled.map(toReimbursementItem)
 
   // ── KPI totals ─────────────────────────────────────────────
   const totalReceivables    = sumRemaining(receivableItems)
@@ -112,7 +125,7 @@ async function FetchMoneyManagerData() {
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-  // ── Cashflow trend — expenses bucketed by week within the cycle ──
+// ── Cashflow trend — expenses bucketed by week within the cycle ──
   const chartData = buildWeeklyExpenseChart(rawTransactions ?? [])
 
   // ── Audit context for the side panel ──────────────────────────
@@ -149,6 +162,9 @@ async function FetchMoneyManagerData() {
       receivables={receivableItems}
       payables={payableItems}
       reimbursements={reimbursementItems}
+      settledReceivables={settledReceivableItems}
+      settledPayables={settledPayableItems}
+      settledReimbursements={settledReimbursementItems}
       history={historyItems}
       chartData={chartData}
       latestEntry={latestEntry}
@@ -163,7 +179,7 @@ function sumRemaining(items: LedgerItem[]) {
 }
 
 function buildWeeklyExpenseChart(
-  txs: { transaction_type: string; amount: number; created_at?: string | null  }[]
+  txs: { transaction_type: string; amount: number; created_at?: string | null }[]
 ): ChartBucket[] {
   const buckets = new Map<string, { label: string; value: number; sortKey: number }>()
 
@@ -185,18 +201,14 @@ function buildWeeklyExpenseChart(
         sortKey: weekStart.getTime(),
       })
     })
-    return Array.from(buckets.entries())
-  .sort(([, a], [, b]) => a.sortKey - b.sortKey)
-  .slice(-7)
-  .map(([key, bucket]) => ({
-    key,
-    label: bucket.label,
-    value: bucket.value,
-  }))
+
+  return Array.from(buckets.values())
+    .sort((a, b) => a.sortKey - b.sortKey)
+    .slice(-7) // most recent 7 weeks max, keeps the chart readable
+    .map(({ label, value }) => ({ label, value }))
 }
 
-
-  // ── Skeleton ──────────────────────────────────────────────────
+// ── Skeleton ──────────────────────────────────────────────────
 
 function DashboardSkeleton() {
   return (

@@ -97,6 +97,7 @@ type ReceivableRecord = {
  
 export interface DashboardData {
   householdMember: HouseholdMember | null
+  userId: string | null
   monthlyCycle: MonthlyCycle | null
   categories: Category[]
   cash: number

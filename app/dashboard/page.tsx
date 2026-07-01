@@ -7,9 +7,9 @@ import LiquidityWidget from "./components/liquidity-widget";
 import LoanForm from "./components/LoanForm" // Import your new unified loan engine
 import AdvancedMetrics from "./components/AdvancedMetrics"
 import ReceivablesList from "./components/ReceivablesList"
-import RecentExpenses from "./components/expenses/Activity"
+import RecentExpenses from "./components/ExpensesDashBlock/Activity" // Updated import path for the new RecentExpenses component
 import Link from "next/link";
-
+import { getLiveServerLiquidity } from "./components/liquidity-widget/liquidity" // Import the server-side liquidity fetcher
 import { getDashboardData } from './_services/dashboard'
 import { getActiveReceivables } from "@/app/dashboard/_db/transactions"
 
@@ -30,9 +30,9 @@ export default async function Dashboard() {
 }
 
 export async function FetchDashboardData() {
-  const { 
+const { 
     householdMember, monthlyCycle, categories, 
-    cash, card, total,
+    // cash: legacyCash, card: legacyCard, total: legacyTotal, // Renamed to avoid collisions
     receivables, payables, netDebt,
     currentExpenses, previousExpenses, runway, debtLoadRatio, 
     rawTransactions 
@@ -41,6 +41,11 @@ export async function FetchDashboardData() {
   const householdId = householdMember?.household_id ?? ""
   const currentCycleId = monthlyCycle?.id ?? ""
   const createdBy = householdMember?.user_id ?? ""
+
+  const liveLiquidity = await getLiveServerLiquidity(householdId)
+  const cash = liveLiquidity.cash
+  const card = liveLiquidity.card
+  const total = liveLiquidity.total
 
   // Fetch the cycle's targeted lending entries concurrently via server query
   const receivablesRecords = await getActiveReceivables(householdId, currentCycleId)
@@ -144,6 +149,7 @@ const expensesWithCategoryNames = rawExpenses.map((tx) => {
         debtLoadRatio={debtLoadRatio}   // Financial stress % score (Payables / Liquidity)
       />
 
+
       
 
 
@@ -153,8 +159,8 @@ const expensesWithCategoryNames = rawExpenses.map((tx) => {
           householdId={householdId} 
           currentCycleId={currentCycleId}
           createdBy={createdBy}
-          cash={cash}
-          card={card}
+          cash={cash} // Live split balance (now Rs. 0.00 cash)
+          card={card} // Live split balance (now Rs. 10,000.00 bank card)
           total={total}
         />
       ) : (

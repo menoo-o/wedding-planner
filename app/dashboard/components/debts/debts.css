@@ -307,6 +307,34 @@
 .mm-empty {
   padding: 2.5rem 1rem; text-align: center;
   color: var(--on-surface-variant); font-size: 0.85rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.9rem;
+}
+.mm-empty p { margin: 0; }
+
+.mm-history-btn {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  border: none; border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; transition: background 0.15s;
+}
+.mm-history-btn:hover { background: var(--surface-variant); }
+
+.mm-history-banner {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.78rem; color: var(--on-surface-variant);
+  background: var(--surface-container-low);
+  border-radius: 9px;
+  padding: 0.55rem 0.9rem;
+  margin-bottom: 0.75rem;
+}
+.mm-history-banner svg { flex-shrink: 0; }
+.mm-history-banner span { flex: 1; }
+.mm-history-banner button {
+  background: none; border: none;
+  color: var(--on-surface); font-weight: 600; font-size: 0.76rem;
+  text-decoration: underline; cursor: pointer; padding: 0; flex-shrink: 0;
 }
 
 /* ── Bottom grid: chart + side card ───────────────────────── */
