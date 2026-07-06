@@ -1,307 +1,328 @@
-// app/dashboard/components/ExpenseForm.tsx
 "use client"
-"use no memo" // Silences the React Compiler watch warning safely
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { createClient } from "@/utils/supabase/client"
+// 🚀 Imported useRouter from next/navigation for dynamic server-side data revalidation
 import { useRouter } from "next/navigation"
 
-type ExpenseFormData = {
-  household_id: string
-  cycle_id: string
-  created_by: string
-  amount: number
-  category_id: string | null
-  description: string
-  notes: string | null
-  transaction_date: string 
-  paid_by: "household" | "other"
-  payment_account: "cash" | "card" | "personal"
-  counterparty_name: string | null
+interface Category {
+  id: string
+  name: string
 }
 
-function getTodayString() {
-  const today = new Date();
-  return today.toISOString().split("T")[0];
+interface Vendor {
+  id: string
+  name: string
+  default_category_id: string | null
+  billing_cycle: string
 }
 
 interface ExpenseFormProps {
-  categories: { id: string; name: string }[]
+  categories: Category[]
+  vendors?: Vendor[] // 🥛 Injected active vendors to support the monthly vendor tab option!
   householdId: string
   currentCycleId: string
   createdBy: string
 }
 
-export default function ExpenseForm({ categories, householdId, currentCycleId, createdBy }: ExpenseFormProps) {
+type ExpenseFormData = {
+  amount: number
+  description: string
+  category_id: string
+  paid_by: "household" | "someone_else" | "pending_vendor" // 🥛 Added pending_vendor status option
+  payment_account: "cash" | "card" | "personal" | "" // Can be empty if vendor tab is selected
+  vendor_id: string | "" // Selected vendor link
+  notes: string
+}
+
+export default function ExpenseForm({
+  categories,
+  vendors = [],
+  householdId,
+  currentCycleId,
+  createdBy,
+}: ExpenseFormProps) {
   const supabase = createClient()
+  // 🚀 Initialized router to support server-side state revalidation
   const router = useRouter()
-  const [isOpen, setIsOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState<{ text: string; type: "success" | "error" } | null>(null)
 
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<ExpenseFormData>({
     defaultValues: {
-      household_id: householdId,
-      cycle_id: currentCycleId,
-      created_by: createdBy,
       amount: undefined,
-      category_id: null,
       description: "",
-      notes: null,
-      transaction_date: getTodayString(),
-      paid_by: "household",        
-      payment_account: "cash",
-      counterparty_name: null,
-    }
-  })
-
-  // 1. DYNAMIC DATA SYNC: Feeds the form fields as soon as server props load on page.tsx
-  useEffect(() => {
-    reset((prevValues) => ({
-      ...prevValues,
-      household_id: householdId,
-      cycle_id: currentCycleId,
-      created_by: createdBy,
-    }))
-  }, [householdId, currentCycleId, createdBy, reset])
-
-  // Watch the payer selection to switch between layouts dynamically
-  const watchedPaidBy = watch("paid_by")
-
-  async function onSubmit(data: ExpenseFormData) {
-    // Safety Fallback Guard
-    if (!data.cycle_id || !data.household_id) {
-      console.error("Submission Blocked: Missing reference context IDs.")
-      return
-    }
-
-    const chosenDate = new Date(data.transaction_date)
-    const now = new Date()
-    
-    if (data.transaction_date === getTodayString()) {
-      chosenDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds())
-    } else {
-      chosenDate.setHours(12, 0, 0)
-    }
-
-    // 2. BUILD COMPREHENSIVE PAYLOAD
-    const cleanPayload = {
-      household_id: data.household_id, // Dynamically assigned from props context
-      cycle_id: data.cycle_id,
-      created_by: data.created_by,     // Injected securely to prevent constraint crashes
-      transaction_type: "expense", 
-      amount: data.amount,
-      category_id: data.category_id || null,
-      description: data.description,
-      notes: data.notes?.trim() || null,
-      paid_by: data.paid_by,
-      created_at: chosenDate.toISOString(),
-      
-      payment_account: data.paid_by === "other" ? "personal" : data.payment_account,
-      counterparty_name: data.paid_by === "other" ? data.counterparty_name?.trim() : null,
-    }
-
-    const { error } = await supabase
-      .from("transactions")
-      .insert(cleanPayload)
-
-    if (error) {
-      console.error("Supabase Error:", error.message)
-      return
-    }
-
-    // 3. CLEAN UP FORM STATE & CLOSE OVERLAY
-    reset({
-      household_id: householdId,
-      cycle_id: currentCycleId,
-      created_by: createdBy,
-      amount: undefined,
-      category_id: null,
-      description: "",
-      notes: null,
-      transaction_date: getTodayString(),
+      category_id: categories[0]?.id || "",
       paid_by: "household",
       payment_account: "cash",
-      counterparty_name: null,
-    })
+      vendor_id: "",
+      notes: "",
+    },
+  })
+
+  // Live observers to drive dynamic UI transitions
+  const watchedPaidBy = watch("paid_by")
+  const watchedVendorId = watch("vendor_id")
+
+  // 🥛 Automatically pre-select default category when a vendor is chosen!
+  const handleVendorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedVendorId = e.target.value
+    setValue("vendor_id", selectedVendorId)
     
-    setIsOpen(false) // Closes the popup modal view automatically
-    router.refresh()
+    const selectedVendor = vendors.find(v => v.id === selectedVendorId)
+    if (selectedVendor?.default_category_id) {
+      setValue("category_id", selectedVendor.default_category_id)
+    }
+  }
+
+  async function onSubmit(data: ExpenseFormData) {
+    setIsSubmitting(true)
+    setSubmitMessage(null)
+
+    try {
+      if (!householdId || !currentCycleId || !createdBy) {
+        throw new Error("Missing active ledger configuration. Please refresh.")
+      }
+
+      // 🥛 Construct payload based on the selected financial pathway
+      const isVendorTab = data.paid_by === "pending_vendor"
+
+      const payload = {
+        household_id: householdId,
+        cycle_id: currentCycleId,
+        created_by: createdBy,
+        transaction_type: "expense",
+        amount: Number(data.amount),
+        description: data.description.trim(),
+        category_id: data.category_id || null,
+        notes: data.notes.trim() || null,
+        paid_by: data.paid_by,
+        // 🥛 If it's on a vendor account tab, no cash has left yet so payment_account must be NULL
+        payment_account: isVendorTab ? null : data.payment_account,
+        // 🥛 Link the vendor ID if using monthly credit tabs
+        vendor_id: isVendorTab && data.vendor_id ? data.vendor_id : null,
+        parent_settlement_id: null,
+      }
+
+      const { error } = await supabase.from("transactions").insert([payload])
+
+      if (error) throw error
+
+      setSubmitMessage({ text: "Expense recorded successfully!", type: "success" })
+      
+      // Reset form but preserve current pathway
+      reset({
+        amount: undefined,
+        description: "",
+        category_id: categories[0]?.id || "",
+        paid_by: data.paid_by,
+        payment_account: isVendorTab ? "cash" : data.payment_account,
+        vendor_id: "",
+        notes: "",
+      })
+
+      // 🚀 Refreshes Next.js server components dynamically to sync up layout stats in real-time
+      router.refresh()
+    } catch (err: unknown) 
+    
+    {
+      setSubmitMessage({ text: `Failed to record: ${err instanceof Error ? err.message : 'Unknown error'}`, type: "error" })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
-    <>
-      {/* Visual CTA Button Link */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors shadow-sm"
-      >
-        Open Expense Form
-      </button>
+    <div className="w-full bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-4">
+      <div>
+        <h2 className="text-base font-bold text-gray-900">Record Expense</h2>
+        <p className="text-xs text-gray-500">Log daily family consumption, bills, or periodic vendor deliveries.</p>
+      </div>
 
-      {/* Modal View Interface */}
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            
-            {/* Modal Corner Close Trigger */}
-            <button 
-              onClick={() => setIsOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-sm"
-            >
-              ✕
-            </button>
-
-            {/* Cleaned Unified Form Wrapper */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 p-6">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">Record Expense</h2>
-                <p className="text-xs text-gray-500">Adds an immediate debit to the active cycle log.</p>
-              </div>
-
-              {/* Hidden System Trackers */}
-              <input type="hidden" {...register("household_id")} />
-              <input type="hidden" {...register("cycle_id")} />
-              <input type="hidden" {...register("created_by")} />
-
-              {/* Date Input */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Transaction Date *</label>
-                <input
-                  type="date"
-                  {...register("transaction_date", { required: "Date is required" })}
-                  suppressHydrationWarning
-                  className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-red-500"
-                />
-                {errors.transaction_date && <p className="text-red-500 text-xs mt-1">{errors.transaction_date.message}</p>}
-              </div>
-
-              {/* Amount Input */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Amount *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  {...register("amount", { 
-                    required: "Amount is required",
-                    valueAsNumber: true,
-                    validate: (val) => val > 0 || "Amount must be greater than 0"
-                  })}
-                  className="w-full border border-gray-300 p-2 rounded-lg text-base font-medium outline-none focus:ring-2 focus:ring-red-500"
-                />
-                {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
-              </div>
-
-              {/* Category Dropdown */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Category</label>
-                <select 
-                  {...register("category_id")} 
-                  className="w-full border border-gray-300 p-2 rounded-lg bg-white text-sm outline-none focus:ring-2 focus:ring-red-500"
-                >
-                  <option value="">Select Category (Optional)</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Description *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Office groceries, internet bill"
-                  {...register("description", { required: "Description is required" })}
-                  className="w-full border border-gray-300 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-500"
-                />
-                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
-              </div>
-
-              {/* Payer Toggle Buttons */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Who Paid?</label>
-                <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
-                  <label className={`flex-1 text-center py-1.5 rounded-md cursor-pointer text-xs font-medium transition-all ${watchedPaidBy === "household" ? "bg-white text-red-600 shadow-sm" : "text-gray-500"}`}>
-                    <input type="radio" value="household" {...register("paid_by")} className="sr-only" />
-                    House Fund
-                  </label>
-                  <label className={`flex-1 text-center py-1.5 rounded-md cursor-pointer text-xs font-medium transition-all ${watchedPaidBy === "other" ? "bg-white text-red-600 shadow-sm" : "text-gray-500"}`}>
-                    <input type="radio" value="other" {...register("paid_by")} className="sr-only" />
-                    Someone Else
-                  </label>
-                </div>
-              </div>
-
-              {/* Conditional Sub-Interfaces */}
-              {watchedPaidBy === "household" ? (
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Payment Source</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center text-xs font-medium text-gray-700 cursor-pointer">
-                      <input type="radio" value="cash" {...register("payment_account")} className="mr-1.5 accent-red-600" /> 
-                      Cash Wallet
-                    </label>
-                    <label className="flex items-center text-xs font-medium text-gray-700 cursor-pointer">
-                      <input type="radio" value="card" {...register("payment_account")} className="mr-1.5 accent-red-600" /> 
-                      Bank Card
-                    </label>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Payers Name *</label>
-                    <input
-                      type="text"
-                      placeholder="Who paid for this?"
-                      {...register("counterparty_name", { 
-                        validate: (val) => watchedPaidBy !== "other" || (val && val.trim() !== "") || "Please specify who paid for this expense"
-                      })}
-                      className="w-full border border-gray-300 p-2 rounded-md text-sm bg-white outline-none focus:ring-2 focus:ring-red-500"
-                    />
-                    {errors.counterparty_name && <p className="text-red-500 text-xs mt-1">{errors.counterparty_name.message}</p>}
-                  </div>
-                </div>
-              )}
-
-              {/* Notes */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Notes (Optional)</label>
-                <textarea 
-                  {...register("notes")} 
-                  className="w-full border border-gray-300 p-2 rounded-lg h-16 text-sm resize-none outline-none focus:ring-2 focus:ring-red-500" 
-                  placeholder="Add context, store info..." 
-                />
-              </div>
-
-              {/* Submit Control Action */}
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded-lg text-sm transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition-colors text-sm shadow-sm"
-                >
-                  {isSubmitting ? "Saving..." : "Record Expense"}
-                </button>
-              </div>
-            </form>
-          </div>
+      {submitMessage && (
+        <div
+          className={`p-3 rounded-lg text-xs font-semibold border ${
+            submitMessage.type === "success"
+              ? "bg-emerald-50 border-emerald-100 text-emerald-800"
+              : "bg-red-50 border-red-100 text-red-800"
+          }`}
+        >
+          {submitMessage.type === "success" ? "✅" : "⚠️"} {submitMessage.text}
         </div>
       )}
-    </>
-  );
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        
+        {/* Row 1: Amount & Description */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-gray-600 uppercase">Amount (PKR) *</label>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              {...register("amount", {
+                required: "Amount is required",
+                valueAsNumber: true,
+                validate: (v) => v > 0 || "Amount must be greater than zero",
+              })}
+              className={`w-full border p-2 rounded-lg text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-gray-900 ${
+                errors.amount ? "border-red-500 bg-red-50" : "border-gray-200"
+              }`}
+            />
+            {errors.amount && <p className="text-red-500 text-[10px] font-semibold">⚠️ {errors.amount.message}</p>}
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-gray-600 uppercase">Description / Item *</label>
+            <input
+              type="text"
+              placeholder="e.g., 2 Liters Milk, Electric Bill"
+              {...register("description", { required: "Description is required" })}
+              className={`w-full border p-2 rounded-lg text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-gray-900 ${
+                errors.description ? "border-red-500 bg-red-50" : "border-gray-200"
+              }`}
+            />
+            {errors.description && <p className="text-red-500 text-[10px] font-semibold">⚠️ {errors.description.message}</p>}
+          </div>
+        </div>
+
+        {/* Row 2: Pathway Selector - Who Paid */}
+        <div className="space-y-1.5">
+          <label className="block text-xs font-bold text-gray-600 uppercase">Payment Arrangement *</label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-gray-50 p-1.5 rounded-lg border border-gray-100">
+            <label className="flex items-center justify-center p-2 rounded-md border bg-white cursor-pointer hover:bg-gray-50 transition-all shadow-sm">
+              <input
+                type="radio"
+                value="household"
+                {...register("paid_by")}
+                className="mr-2 accent-gray-900"
+              />
+              <span className="text-xs font-semibold text-gray-800">House Fund</span>
+            </label>
+
+            <label className="flex items-center justify-center p-2 rounded-md border bg-white cursor-pointer hover:bg-gray-50 transition-all shadow-sm">
+              <input
+                type="radio"
+                value="someone_else"
+                {...register("paid_by")}
+                className="mr-2 accent-gray-900"
+              />
+              <span className="text-xs font-semibold text-gray-800">Someone Else</span>
+            </label>
+
+            <label className="flex items-center justify-center p-2 rounded-md border bg-white cursor-pointer hover:bg-gray-50 transition-all shadow-sm border-amber-200">
+              <input
+                type="radio"
+                value="pending_vendor"
+                {...register("paid_by")}
+                className="mr-2 accent-amber-500"
+              />
+              <span className="text-xs font-semibold text-amber-700">Vendor Tab 🥛</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Row 3: Conditional Inputs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          {/* A. If paid immediately via House Fund or Someone Else */}
+    {/* A. If paid immediately via House Fund or Someone Else */}
+          {/* 🚀 Cast to string to safely bypass strict type union comparison warning ts(2367) */}
+          {(watchedPaidBy as string) !== "pending_vendor" && (
+            <div className="space-y-1 animate-fadeIn">
+              <label className="block text-xs font-bold text-gray-600 uppercase">Payment Source *</label>
+              <select
+                {...register("payment_account", {
+                  required: (watchedPaidBy as string) !== "pending_vendor" ? "Payment source is required" : false,
+                })}
+                className="w-full bg-white border border-gray-200 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+              >
+                <option value="cash">Cash Wallet</option>
+                <option value="card">Bank Card</option>
+                <option value="personal">Personal Account</option>
+              </select>
+            </div>
+          )}
+
+          {/* B. 🥛 If logged on an outstanding Monthly Vendor Tab */}
+          {watchedPaidBy === "pending_vendor" && (
+            <div className="space-y-1 animate-fadeIn">
+              <label className="block text-xs font-bold text-amber-700 uppercase">Choose Monthly Vendor Account *</label>
+              {vendors.length === 0 ? (
+                <div className="p-2 border border-dashed border-amber-200 bg-amber-50/50 text-amber-800 rounded-lg text-xs">
+                  No monthly vendors registered. Go to Vendor accounts to add your milkman or water supplier.
+                </div>
+              ) : (
+                <select
+                  value={watchedVendorId}
+                  onChange={handleVendorChange}
+                  className="w-full bg-white border border-amber-300 p-2 rounded-lg text-sm text-amber-900 outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                >
+                  <option value="">-- Select Vendor Account --</option>
+                  {vendors.map((vendor) => (
+                    <option key={vendor.id} value={vendor.id}>
+                      {vendor.name} ({vendor.billing_cycle})
+                    </option>
+                  ))}
+                </select>
+              )}
+              {watchedPaidBy === "pending_vendor" && !watchedVendorId && (
+                <p className="text-amber-600 text-[10px] font-semibold">⚠️ Please select a vendor to log this against.</p>
+              )}
+            </div>
+          )}
+
+          {/* Category Dropdown (Always displayed, but automatically pre-selected if vendor is chosen) */}
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-gray-600 uppercase">Expense Category</label>
+            <select
+              {...register("category_id")}
+              className="w-full bg-white border border-gray-200 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+            >
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+        </div>
+
+        {/* Optional Notes */}
+        <div className="space-y-1">
+          <label className="block text-xs font-bold text-gray-600 uppercase">Notes / Memo (Optional)</label>
+          <input
+            type="text"
+            placeholder="e.g., missed 1 liter on Monday, extra guest topup"
+            {...register("notes")}
+            className="w-full border border-gray-200 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+          />
+        </div>
+
+        {/* Submit */}
+        <button
+          type="submit"
+          disabled={isSubmitting || (watchedPaidBy === "pending_vendor" && !watchedVendorId)}
+          className={`w-full text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wider transition-all shadow-sm ${
+            watchedPaidBy === "pending_vendor"
+              ? "bg-amber-600 hover:bg-amber-700 disabled:bg-amber-200"
+              : "bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300"
+          }`}
+        >
+          {isSubmitting ? "Recording..." : watchedPaidBy === "pending_vendor" ? "Add to Monthly Tab 🥛" : "Record Expense"}
+        </button>
+
+      </form>
+    </div>
+  )
 }

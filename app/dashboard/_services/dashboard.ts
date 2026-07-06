@@ -13,6 +13,7 @@ import { DashboardData } from '@/lib/types'
 
 const EMPTY_DASHBOARD: DashboardData = {
   householdMember: null,
+  userId: null,
   monthlyCycle: null,
   categories: [],
   cash: 0,
@@ -41,9 +42,17 @@ export async function getDashboardData(): Promise<DashboardData> {
     redirect("/login")
   }
 
+  // get user id
+  const userId = data.claims.sub
+  if (!userId) {
+    console.error("No user ID found in claims")
+    redirect("/login")
+  }
+
   // ── 2. Household membership ───────────────────────────────
   const householdMember = await getHouseholdMember(data.claims.sub)
   if (!householdMember) return EMPTY_DASHBOARD
+
 
   const { household_id } = householdMember
 
@@ -77,6 +86,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   // ── 6. Return ─────────────────────────────────────────────
   return {
     householdMember,
+    userId,
     monthlyCycle,
     categories,
     cash: cashBalance,

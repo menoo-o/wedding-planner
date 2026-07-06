@@ -12,6 +12,10 @@ import Link from "next/link";
 import { getLiveServerLiquidity } from "./components/liquidity-widget/liquidity" // Import the server-side liquidity fetcher
 import { getDashboardData } from './_services/dashboard'
 import { getActiveReceivables } from "@/app/dashboard/_db/transactions"
+import { getActivePayables } from "@/app/dashboard/_db/transactions"
+import ActivePayables from "@/app/dashboard/components/Payables" // Import the new ActivePayables component
+import VendorAccountsWidget from "@/app/dashboard/components/VendorAccountsWidget" // Import the new VendorAccountsWidget component
+import { getVendors } from "@/app/dashboard/_services/vendors"
 
 export default async function Dashboard() {
   return (
@@ -47,9 +51,14 @@ const {
   const card = liveLiquidity.card
   const total = liveLiquidity.total
 
-  // Fetch the cycle's targeted lending entries concurrently via server query
+// Fetch the cycle's targeted lending entries concurrently via server query
   const receivablesRecords = await getActiveReceivables(householdId, currentCycleId)
 
+   // Fetch the list of active custom monthly vendors configured for this household
+  const vendors = await getVendors(householdId)
+  
+  // 🚀 Call with only householdId to match your backward-compatible signature!
+  const payablesRecords = await getActivePayables(householdId)
   // 1. Filter out only expense rows
 const rawExpenses = (rawTransactions || []).filter(
   (tx) => tx.transaction_type === "expense"
@@ -80,10 +89,11 @@ const expensesWithCategoryNames = rawExpenses.map((tx) => {
      </span>
 
       <DashForm 
-           categories={categories.map(c => ({ id: c.id, name: c.name }))}
-            householdId={householdId}
-            currentCycleId={currentCycleId}
-            createdBy={createdBy}
+        categories={categories.map(c => ({ id: c.id, name: c.name }))}
+        vendors={vendors}
+        householdId={householdId}
+        currentCycleId={currentCycleId}
+        createdBy={createdBy}
       />
 
       {/* Top-Up Form */}
@@ -104,7 +114,13 @@ const expensesWithCategoryNames = rawExpenses.map((tx) => {
 
       <AddCategoryForm householdId={householdId} />
 
-     
+  <ActivePayables
+        records={payablesRecords}
+        totalPayablesAmount={payables}
+        cashBalance={cash}
+        cardBalance={card}
+        createdBy={createdBy}
+      />
 
       {householdMember ? (
         <div className="rounded-lg border p-4 shadow-sm">
@@ -131,6 +147,17 @@ const expensesWithCategoryNames = rawExpenses.map((tx) => {
           No active household membership found.
         </p> 
       )}
+
+       {/* 🥛 New Vendor Accounts Settlement Workspace Dashboard Widget */}
+      <div className="my-6">
+        <VendorAccountsWidget
+          householdId={householdId}
+          currentCycleId={currentCycleId}
+          createdBy={createdBy}
+          cashBalance={cash}
+          cardBalance={card}
+        />
+      </div>
 
        <RecentExpenses 
         transactions={expensesWithCategoryNames} 
