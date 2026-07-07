@@ -170,3 +170,32 @@ export async function settleVendorAccount(
 
   return settlementTxId;
 }
+
+export async function createVendor(payload: {
+  household_id: string;
+  name: string;
+  default_category_id?: string | null;
+  billing_cycle?: string;
+}) {
+  const { createClient } = await import("@/utils/supabase/server");
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("vendors")
+    .insert([
+      {
+        household_id: payload.household_id,
+        name: payload.name,
+        default_category_id: payload.default_category_id || null,
+        billing_cycle: payload.billing_cycle || "monthly",
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
+import CreateVendorModal from "./CreateVendorModal"
 
 interface Vendor {
   id: string
@@ -10,6 +11,13 @@ interface Vendor {
   default_category_id: string | null
   billing_cycle: string
 }
+
+interface Category {
+  id: string
+  name: string
+}
+
+
 
 interface VendorWithBalance extends Vendor {
   outstandingBalance: number
@@ -29,11 +37,15 @@ interface VendorAccountsProps {
   createdBy: string
   cashBalance: number // 💳 Used for client-side settlement validation
   cardBalance: number
+  categories: Category[] // 🥛 Add this line to the interface!
+  vendors: any[] // your existing vendor type definition
 }
+
 
 export default function VendorAccountsWidget({
   householdId,
   currentCycleId,
+ categories = [],
   createdBy,
   cashBalance,
   cardBalance,
@@ -228,37 +240,45 @@ export default function VendorAccountsWidget({
           </span>
         </div>
 
-        <div className="space-y-2 overflow-y-auto max-h-[350px] pr-1">
-          {vendors.length === 0 ? (
-            <div className="text-center py-8 text-xs text-gray-400 border border-dashed rounded-lg">
-              No custom vendors created. Create vendor entries in Supabase to start.
-            </div>
-          ) : (
-            vendors.map((vendor) => (
-              <button
-                key={vendor.id}
-                onClick={() => fetchVendorDetails(vendor)}
-                className={`w-full flex items-center justify-between p-3.5 rounded-xl border text-left transition-all ${
-                  selectedVendor?.id === vendor.id
-                    ? "border-amber-500 bg-amber-50/20"
-                    : "border-gray-100 hover:border-gray-200 bg-white"
-                }`}
-              >
-                <div>
-                  <h4 className="text-sm font-bold text-gray-900">{vendor.name}</h4>
-                  <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest block mt-0.5">
-                    {vendor.billing_cycle} cycle
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className={`text-xs font-bold font-mono ${vendor.outstandingBalance > 0 ? "text-amber-600" : "text-gray-400"}`}>
-                    Rs. {vendor.outstandingBalance.toLocaleString()}
-                  </span>
-                </div>
-              </button>
-            ))
-          )}
+   <div className="space-y-2 overflow-y-auto max-h-[350px] pr-1">
+  {vendors.length === 0 ? (
+    <div className="text-center py-8 px-4 border border-dashed border-gray-200 rounded-xl bg-gray-50/30 flex flex-col items-center justify-center gap-2">
+      <p className="text-xs text-gray-500 font-medium">
+        No custom vendors created yet.
+      </p>
+      
+      {/* 🥛 Dynamic inline placement for the registration trigger modal */}
+      <CreateVendorModal 
+        householdId={householdId} 
+        categories={categories} 
+      />
+    </div>
+  ) : (
+    vendors.map((vendor) => (
+      <button
+        key={vendor.id}
+        onClick={() => fetchVendorDetails(vendor)}
+        className={`w-full flex items-center justify-between p-3.5 rounded-xl border text-left transition-all ${
+          selectedVendor?.id === vendor.id
+            ? "border-amber-500 bg-amber-50/20 shadow-sm"
+            : "border-gray-100 hover:border-gray-200 bg-white"
+        }`}
+      >
+        <div>
+          <h4 className="text-sm font-bold text-gray-900">{vendor.name}</h4>
+          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest block mt-0.5">
+            {vendor.billing_cycle} cycle
+          </span>
         </div>
+        <div className="text-right">
+          <span className={`text-xs font-bold font-mono ${vendor.outstandingBalance > 0 ? "text-amber-600" : "text-gray-400"}`}>
+            Rs. {vendor.outstandingBalance.toLocaleString()}
+          </span>
+        </div>
+      </button>
+    ))
+  )}
+</div>
       </div>
 
       {/* 2. Detailed Verification and Settlement Module (Occupies 2 columns) */}

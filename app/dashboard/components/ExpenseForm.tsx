@@ -253,33 +253,34 @@ export default function ExpenseForm({
             </div>
           )}
 
-          {/* B. 🥛 If logged on an outstanding Monthly Vendor Tab */}
-          {watchedPaidBy === "pending_vendor" && (
-            <div className="space-y-1 animate-fadeIn">
-              <label className="block text-xs font-bold text-amber-700 uppercase">Choose Monthly Vendor Account *</label>
-              {vendors.length === 0 ? (
-                <div className="p-2 border border-dashed border-amber-200 bg-amber-50/50 text-amber-800 rounded-lg text-xs">
-                  No monthly vendors registered. Go to Vendor accounts to add your milkman or water supplier.
-                </div>
-              ) : (
-                <select
-                  value={watchedVendorId}
-                  onChange={handleVendorChange}
-                  className="w-full bg-white border border-amber-300 p-2 rounded-lg text-sm text-amber-900 outline-none focus:ring-2 focus:ring-amber-500 font-medium"
-                >
-                  <option value="">-- Select Vendor Account --</option>
-                  {vendors.map((vendor) => (
-                    <option key={vendor.id} value={vendor.id}>
-                      {vendor.name} ({vendor.billing_cycle})
-                    </option>
-                  ))}
-                </select>
-              )}
-              {watchedPaidBy === "pending_vendor" && !watchedVendorId && (
-                <p className="text-amber-600 text-[10px] font-semibold">⚠️ Please select a vendor to log this against.</p>
-              )}
+      {/* B. 🥛 If logged on an outstanding Monthly Vendor Tab */}
+      {(watchedPaidBy as string) === "pending_vendor" && (
+        <div className="space-y-1 animate-fadeIn">
+          <label className="block text-xs font-bold text-amber-700 uppercase">Choose Monthly Vendor Account *</label>
+          {vendors.length === 0 ? (
+            <div className="p-3 border border-dashed border-amber-200 bg-amber-50/50 text-amber-800 rounded-lg text-xs font-medium text-center">
+              No monthly vendors registered yet. <br />
+              <span className="text-[11px] text-amber-600 font-normal">Use the ?=Add Your First Vendor Account=? button in the Vendor Panel to start.</span>
             </div>
+          ) : (
+            <select
+              value={watchedVendorId}
+              onChange={handleVendorChange}
+              className="w-full bg-white border border-amber-300 p-2 rounded-lg text-sm text-amber-900 outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+            >
+              <option value="">-- Select Vendor Account --</option>
+              {vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name} ({vendor.billing_cycle})
+                </option>
+              ))}
+            </select>
           )}
+          {(watchedPaidBy as string) === "pending_vendor" && !watchedVendorId && (
+            <p className="text-amber-600 text-[10px] font-semibold">⚠️ Please select a vendor to log this against.</p>
+          )}
+        </div>
+      )}
 
           {/* Category Dropdown (Always displayed, but automatically pre-selected if vendor is chosen) */}
           <div className="space-y-1">
