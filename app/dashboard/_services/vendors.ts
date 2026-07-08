@@ -1,3 +1,5 @@
+'use server'
+
 //app/dashboard/_services/vendors.ts
 import { createClient } from '@/utils/supabase/server'; // Adjust based on your server-client helper setup
 
@@ -51,7 +53,14 @@ const supabase = await createClient();
     throw new Error(`Failed to load vendors: ${error.message}`);
   }
 
-  return (data || []) as Vendor[];
+  return (data || []).map((v) => ({
+    id: String(v.id),
+    household_id: String(v.household_id),
+    name: String(v.name),
+    default_category_id: v.default_category_id ?? null,
+    billing_cycle: v.billing_cycle,
+    created_at: String(v.created_at),
+  }));
 }
 
 /**
@@ -197,5 +206,14 @@ export async function createVendor(payload: {
     throw new Error(error.message);
   }
 
-  return data;
+  // 🚀 Normalize to a plain object with no possible `undefined` fields —
+  // RSC serialization silently drops `undefined` and warns "N items not stringified".
+  return {
+    id: String(data.id),
+    household_id: String(data.household_id),
+    name: String(data.name),
+    default_category_id: data.default_category_id ?? null,
+    billing_cycle: String(data.billing_cycle),
+    created_at: String(data.created_at),
+  };
 }

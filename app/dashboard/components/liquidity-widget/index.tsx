@@ -7,19 +7,33 @@ import { useRouter } from "next/navigation"
 import LiquidityDisplay from "./LiquidityDisplay"
 import TransferModal from "./TransferModal"
 
-interface LiquidityWidgetProps {
+interface LiquidityWidgetIndexProps {
   householdId: string
   currentCycleId: string
-  createdBy?: string
+  createdBy: string | null
   cash: number
-  card: number
   total: number
+  card: number
+  // 💼 Update interface contract to welcome the new properties
+  walletName: string | null
+  savingsBalance: number
 }
 
-export default function LiquidityWidget({ householdId, currentCycleId, createdBy, cash, card, total }: LiquidityWidgetProps) {
-  const router = useRouter()
+export default function LiquidityWidgetIndex({
+  householdId,
+  currentCycleId,
+  createdBy,
+  total,
+  cash,
+  card,
+  walletName,         // 👈 Grab it here
+  savingsBalance,     // 👈 Grab it here
+}: LiquidityWidgetIndexProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+
   const [isPending, startTransition] = useTransition() // Handles the smooth loader state
+    const router = useRouter()
 
   // Triggers a fresh server data update across the layout seamlessly
   const handleRefresh = () => {
@@ -73,6 +87,9 @@ export default function LiquidityWidget({ householdId, currentCycleId, createdBy
         createdBy={createdBy}
         cashBalance={cash} // <-- Pass live server-supplied balance
         cardBalance={card} // <-- Pass live server-supplied balance
+
+        walletName={walletName}
+        savingsBalance={savingsBalance}
       />
     </div>
   )

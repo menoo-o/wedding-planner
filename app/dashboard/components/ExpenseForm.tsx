@@ -1,3 +1,4 @@
+//app/dashboard/components/ExpenseForm.tsx
 "use client"
 
 import { useState } from "react"
@@ -83,7 +84,7 @@ export default function ExpenseForm({
     }
   }
 
-  async function onSubmit(data: ExpenseFormData) {
+async function onSubmit(data: ExpenseFormData) {
     setIsSubmitting(true)
     setSubmitMessage(null)
 
@@ -93,6 +94,7 @@ export default function ExpenseForm({
       }
 
       // 🥛 Construct payload based on the selected financial pathway
+    // 🥛 Construct payload based on the selected financial pathway
       const isVendorTab = data.paid_by === "pending_vendor"
 
       const payload = {
@@ -104,17 +106,22 @@ export default function ExpenseForm({
         description: data.description.trim(),
         category_id: data.category_id || null,
         notes: data.notes.trim() || null,
-        paid_by: data.paid_by,
-        // 🥛 If it's on a vendor account tab, no cash has left yet so payment_account must be NULL
-        payment_account: isVendorTab ? null : data.payment_account,
-        // 🥛 Link the vendor ID if using monthly credit tabs
+        
+        // 🛡️ THE FIX: Keep database enum happy by mapping it to "household" 
+        // while letting payment_account: "vendor" isolate it as a pending balance!
+        paid_by: isVendorTab ? "household" : data.paid_by,
+        
+        // Satisfies the NOT-NULL constraint we fixed earlier
+        payment_account: isVendorTab ? "vendor" : data.payment_account,
+        
+        // Link the vendor ID to accumulate the outstanding tab balance
         vendor_id: isVendorTab && data.vendor_id ? data.vendor_id : null,
         parent_settlement_id: null,
       }
 
       const { error } = await supabase.from("transactions").insert([payload])
 
-      if (error) throw error
+      if (error) throw new Error(error.message)
 
       setSubmitMessage({ text: "Expense recorded successfully!", type: "success" })
       
@@ -131,9 +138,7 @@ export default function ExpenseForm({
 
       // 🚀 Refreshes Next.js server components dynamically to sync up layout stats in real-time
       router.refresh()
-    } catch (err: unknown) 
-    
-    {
+    } catch (err: unknown) {
       setSubmitMessage({ text: `Failed to record: ${err instanceof Error ? err.message : 'Unknown error'}`, type: "error" })
     } finally {
       setIsSubmitting(false)

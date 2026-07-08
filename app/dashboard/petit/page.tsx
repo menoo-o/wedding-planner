@@ -6,7 +6,7 @@ import PetitPlaisirWorkspace from '@/app/dashboard/components/Petit-Block';
 // before any of the client-side workspace ever gets sent to the browser.
 async function PetitPage() {
   await requirePetitAccess();
-
+// this is where you would fetch any additional data needed for the PetitPlaisirWorkspace component, if necessary
   return <PetitPlaisirWorkspace />;
 }
 

@@ -16,6 +16,7 @@ import { getActivePayables } from "@/app/dashboard/_db/transactions"
 import ActivePayables from "@/app/dashboard/components/Payables" // Import the new ActivePayables component
 import VendorAccountsWidget from "@/app/dashboard/components/VendorAccountsWidget" // Import the new VendorAccountsWidget component
 import { getVendors } from "@/app/dashboard/_services/vendors"
+import SavingsVaultWidget from "./components/SavingsVaultWidget"
 
 export default async function Dashboard() {
   return (
@@ -35,11 +36,21 @@ export default async function Dashboard() {
 
 export async function FetchDashboardData() {
 const { 
-    householdMember, monthlyCycle, categories, 
-    // cash: legacyCash, card: legacyCard, total: legacyTotal, // Renamed to avoid collisions
-    receivables, payables, netDebt,
-    currentExpenses, previousExpenses, runway, debtLoadRatio, 
-    rawTransactions 
+    householdMember, 
+    monthlyCycle, 
+    categories, 
+    receivables, 
+    payables, 
+    userId,
+    netDebt,
+    currentExpenses, 
+    previousExpenses, 
+    runway, 
+    debtLoadRatio, 
+    rawTransactions,
+    // 💼 Destructure the new properties returned by getDashboardData()
+    walletName,
+    savingsBalance
   } = await getDashboardData()
 
   const householdId = householdMember?.household_id ?? ""
@@ -148,6 +159,7 @@ const expensesWithCategoryNames = rawExpenses.map((tx) => {
         </p> 
       )}
 
+
        {/* 🥛 New Vendor Accounts Settlement Workspace Dashboard Widget */}
       <div className="my-6">
         <VendorAccountsWidget
@@ -182,19 +194,27 @@ const expensesWithCategoryNames = rawExpenses.map((tx) => {
 
 
 {currentCycleId ? (
-        <LiquidityWidget 
-          householdId={householdId} 
-          currentCycleId={currentCycleId}
-          createdBy={createdBy}
-          cash={cash} // Live split balance (now Rs. 0.00 cash)
-          card={card} // Live split balance (now Rs. 10,000.00 bank card)
-          total={total}
+        <LiquidityWidget
+          householdId={householdId}
+          currentCycleId={currentCycleId} // 🚀 Error fixed! Uses computed variable string
+          createdBy={userId}               // 🚀 Error fixed! Uses destructured server userId
+          cash={cash}
+          card={card}
+          total={total}                    // 🚀 Included to keep your compiler completely green!
+          walletName={walletName}
+          savingsBalance={savingsBalance}
         />
       ) : (
         <div className="p-4 text-center border border-dashed rounded-xl bg-gray-50 text-xs text-gray-400">
           No active financial ledger cycle found.
         </div>
       )}
+
+<SavingsVaultWidget 
+      householdId={householdId}
+      walletName={walletName}
+      savingsBalance={savingsBalance}
+    />
 
        <ReceivablesList 
             records={receivablesRecords} 

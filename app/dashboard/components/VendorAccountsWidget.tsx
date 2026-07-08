@@ -1,3 +1,4 @@
+//app/dashboard/components/VendorAccountsWidget.tsx
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
@@ -86,10 +87,11 @@ export default function VendorAccountsWidget({
 
       // 2. Fetch all outstanding pending_vendor transactions for these vendors
       const vendorIds = vendorData.map(v => v.id)
+// 🥛 FIX 1: Look for payment_account = 'vendor' instead of paid_by = 'pending_vendor'
       const { data: txData, error: txErr } = await supabase
         .from("transactions")
         .select("amount, vendor_id")
-        .eq("paid_by", "pending_vendor")
+        .eq("payment_account", "vendor")
         .is("parent_settlement_id", null)
         .in("vendor_id", vendorIds)
 
@@ -125,14 +127,14 @@ export default function VendorAccountsWidget({
       setActionError(null)
       setActionErrorSuccess(null)
 
+// 🥛 FIX 2: Look for payment_account = 'vendor' here too to grab itemized entries
       const { data, error } = await supabase
         .from("transactions")
         .select("id, amount, description, notes, created_at")
         .eq("vendor_id", vendor.id)
-        .eq("paid_by", "pending_vendor")
+        .eq("payment_account", "vendor")
         .is("parent_settlement_id", null)
         .order("created_at", { ascending: false })
-
       if (error) throw error
 
       setPendingTxs(data || [])
@@ -184,11 +186,11 @@ export default function VendorAccountsWidget({
       if (settlementErr || !settlementTx) throw settlementErr
 
       // B. Stamp all unpaid entries to point to this settlement transaction ID
-      const { error: stampErr } = await supabase
+const { error: stampErr } = await supabase
         .from("transactions")
         .update({ parent_settlement_id: settlementTx.id })
         .eq("vendor_id", selectedVendor.id)
-        .eq("paid_by", "pending_vendor")
+        .eq("payment_account", "vendor")
         .is("parent_settlement_id", null)
 
       // Fail-Safe: Manual rollback protection to prevent balance leaks

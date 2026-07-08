@@ -113,5 +113,9 @@ export interface DashboardData {
   rawTransactions: CycleCalculationTransaction[]
   payablesRecords: PayableRecord[]
   receivablesRecords: ReceivableRecord[]
+  savingsBalance: number // 💼 Added track
+  walletName: string | null // 💼 Added track
+  overallLiquidity: number // 💼 Added track (Cash + Card + Savings)
+  
 }
 
