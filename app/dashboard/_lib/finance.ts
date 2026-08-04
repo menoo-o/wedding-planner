@@ -2,7 +2,7 @@
 
 // ── Interfaces ────────────────────────────────────────────────
 
-import {LifetimeDebtTransaction, CycleCalculationTransaction} from "@/lib/types"
+import {LifetimeDebtTransaction, CycleCalculationTransaction, ReceivableRecord} from "@/lib/types"
 
 
 export interface BalanceResult {
@@ -133,3 +133,51 @@ export function computeDebtLoadRatio(payables: number, totalLiquidity: number): 
   if (totalLiquidity > 0) return (payables / totalLiquidity) * 100
   return payables > 0 ? 100 : 0
 }
+
+
+export function deriveReceivablesLedger(
+  currentTxs: CycleCalculationTransaction[]
+): { active: ReceivableRecord[]; settled: ReceivableRecord[] } {
+  const records = currentTxs.filter((tx) =>
+    tx.transaction_type === "loan_out" || tx.transaction_type === "loan_return"
+  )
+
+  const repaymentsMap = new Map<string, number>()
+  records
+    .filter((tx) => tx.transaction_type === "loan_return" && tx.related_transaction_id)
+    .forEach((tx) => {
+      const prev = repaymentsMap.get(tx.related_transaction_id!) ?? 0
+      repaymentsMap.set(tx.related_transaction_id!, prev + Number(tx.amount))
+    })
+
+  const active: ReceivableRecord[] = []
+  const settled: ReceivableRecord[] = []
+
+  records
+    .filter((tx) => tx.transaction_type === "loan_out")
+    .forEach((tx) => {
+      const repaid = repaymentsMap.get(tx.id) ?? 0
+      const remaining = Math.max(0, Number(tx.amount) - repaid)
+      const record: ReceivableRecord = {
+        id: tx.id,
+        amount: Number(tx.amount),
+        remaining_amount: remaining,
+        loan_status: tx.loan_status as "pending" | "partial" | "settled",
+        transaction_type: tx.transaction_type,
+        payment_account: tx.payment_account,
+        counterparty_name: tx.counterparty_name ?? null,
+        description: tx.description,
+        created_at: tx.created_at ?? "",
+        notes: tx.notes ?? null,
+        related_transaction_id: tx.related_transaction_id,
+      }
+      const isSettled = tx.loan_status === "settled" || remaining <= 0
+      ;(isSettled ? settled : active).push(record)
+    })
+
+  const sortDesc = (a: ReceivableRecord, b: ReceivableRecord) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+
+  return { active: active.sort(sortDesc), settled: settled.sort(sortDesc) }
+}
+

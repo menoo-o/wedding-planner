@@ -8,7 +8,7 @@ export async function getHouseholdCategories(householdId: string): Promise<Categ
 
   const { data, error } = await supabase
     .from("categories")
-    .select("*")
+    .select("id, household_id, name")
     .eq("household_id", householdId)
     .overrideTypes<Category[]>()
 

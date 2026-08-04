@@ -64,11 +64,10 @@ export interface CycleCalculationTransaction {
   related_transaction_id: string | null
   category_id?: string | null
   paid_by?: "household" | "other"
-  // New: tracks loan lifecycle — only set on loan_in / loan_out, null otherwise
   loan_status: "pending" | "partial" | "settled" | null
   counterparty_name?: string | null
-  created_at?: string | null  
-
+  created_at?: string | null
+  notes?: string | null   // ← add: already selected in getCycleTransactions, just wasn't typed
 }
 
  
@@ -81,7 +80,7 @@ export interface LifetimeDebtTransaction {
 }
 
 
-type ReceivableRecord = {
+export type ReceivableRecord = {
   id: string
   amount: number
   remaining_amount: number  // original minus all repayments so far
@@ -118,4 +117,6 @@ export interface DashboardData {
   overallLiquidity: number // 💼 Added track (Cash + Card + Savings)
   
 }
+
+
 

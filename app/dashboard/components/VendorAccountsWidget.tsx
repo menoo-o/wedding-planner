@@ -117,7 +117,7 @@ export default function VendorAccountsWidget({
   }, [supabase, householdId])
 
   useEffect(() => {
-    fetchVendorsAndBalances()
+    fetchVendorsAndBalances() // warning here: Error: Calling setState synchronously within an effect can trigger cascading renders
   }, [fetchVendorsAndBalances])
 
   const fetchVendorDetails = async (vendor: VendorWithBalance) => {

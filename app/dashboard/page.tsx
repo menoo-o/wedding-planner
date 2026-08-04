@@ -11,8 +11,6 @@ import RecentExpenses from "./components/ExpensesDashBlock/Activity" // Updated 
 import Link from "next/link";
 import { getLiveServerLiquidity } from "./components/liquidity-widget/liquidity" // Import the server-side liquidity fetcher
 import { getDashboardData } from './_services/dashboard'
-import { getActiveReceivables } from "@/app/dashboard/_db/transactions"
-import { getActivePayables } from "@/app/dashboard/_db/transactions"
 import ActivePayables from "@/app/dashboard/components/Payables" // Import the new ActivePayables component
 import VendorAccountsWidget from "@/app/dashboard/components/VendorAccountsWidget" // Import the new VendorAccountsWidget component
 import { getVendors } from "@/app/dashboard/_services/vendors"
@@ -21,12 +19,6 @@ import SavingsVaultWidget from "./components/SavingsVaultWidget"
 export default async function Dashboard() {
   return (
     <div className="dashboard-container">
-      {/* 
-        Suspense enables streaming:
-        - The page shell renders immediately
-        - FetchDashboardData resolves separately
-        - Skeleton is shown while waiting
-      */}
       <Suspense fallback={<DashboardSkeleton />}>
         <FetchDashboardData />
       </Suspense>
@@ -34,64 +26,47 @@ export default async function Dashboard() {
   )
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    ),
+  ])
+}
+
 export async function FetchDashboardData() {
-const { 
-    householdMember, 
-    monthlyCycle, 
-    categories, 
-    receivables, 
-    payables, 
-    userId,
-    netDebt,
-    currentExpenses, 
-    previousExpenses, 
-    runway, 
-    debtLoadRatio, 
-    rawTransactions,
-    // 💼 Destructure the new properties returned by getDashboardData()
-    walletName,
-    savingsBalance
-  } = await getDashboardData()
+  const {
+    householdMember, monthlyCycle, categories, receivables, payables,
+    userId, netDebt, currentExpenses, previousExpenses, runway,
+    debtLoadRatio, rawTransactions, walletName, savingsBalance,
+    receivablesRecords, payablesRecords,
+  } = await withTimeout(getDashboardData(), 8000, "getDashboardData")
 
   const householdId = householdMember?.household_id ?? ""
   const currentCycleId = monthlyCycle?.id ?? ""
   const createdBy = householdMember?.user_id ?? ""
 
-  const liveLiquidity = await getLiveServerLiquidity(householdId)
-  const cash = liveLiquidity.cash
-  const card = liveLiquidity.card
-  const total = liveLiquidity.total
+  const [liveLiquidity, vendors] = await withTimeout(
+    Promise.all([
+      getLiveServerLiquidity(householdId),
+      getVendors(householdId),
+    ]),
+    8000,
+    "liveLiquidity/vendors"
+  )
 
-// Fetch the cycle's targeted lending entries concurrently via server query
-  const receivablesRecords = await getActiveReceivables(householdId, currentCycleId)
+  const { cash, card, total } = liveLiquidity
 
-   // Fetch the list of active custom monthly vendors configured for this household
-  const vendors = await getVendors(householdId)
-  
-  // 🚀 Call with only householdId to match your backward-compatible signature!
-  const payablesRecords = await getActivePayables(householdId)
-  // 1. Filter out only expense rows
-const rawExpenses = (rawTransactions || []).filter(
-  (tx) => tx.transaction_type === "expense"
-)
-
-// 2. Map through expenses and dynamically attach the matching category name
-const expensesWithCategoryNames = rawExpenses.map((tx) => {
-  const matchingCategory = categories.find((cat) => cat.id === tx.category_id)
-  
-  return {
-    ...tx,
-    // If a match is found, assign its name; otherwise fallback to "General"
-    category_name: matchingCategory ? matchingCategory.name : "General" 
-  }
-})
+  const rawExpenses = (rawTransactions || []).filter((tx) => tx.transaction_type === "expense")
+  const expensesWithCategoryNames = rawExpenses.map((tx) => {
+    const matchingCategory = categories.find((cat) => cat.id === tx.category_id)
+    return { ...tx, category_name: matchingCategory ? matchingCategory.name : "General" }
+  })
 
   return (
     <div className="dashboard-box">
-      <h1 className="text-2xl font-semibold">
-        Welcome to Your Dashboard
-      </h1>
-      {/* Expense Form */}
+      <h1 className="text-2xl font-semibold">Welcome to Your Dashboard</h1>
 
      <span>
       <Link href="/dashboard/debts" className="text-blue-500 underline">
@@ -162,13 +137,15 @@ const expensesWithCategoryNames = rawExpenses.map((tx) => {
 
        {/* 🥛 New Vendor Accounts Settlement Workspace Dashboard Widget */}
       <div className="my-6">
-        <VendorAccountsWidget
-          householdId={householdId}
-          currentCycleId={currentCycleId}
-          createdBy={createdBy}
-          cashBalance={cash}
-          cardBalance={card}
-        />
+    <VendorAccountsWidget
+      householdId={householdId}
+      currentCycleId={currentCycleId}
+      createdBy={createdBy}
+      cashBalance={cash}
+      cardBalance={card}
+      categories={categories}
+      vendors={vendors}
+    />
       </div>
 
        <RecentExpenses 
