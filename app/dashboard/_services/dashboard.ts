@@ -69,23 +69,26 @@ export async function getDashboardData(): Promise<DashboardData> {
   const { household_id } = householdMember
 
   // Stage 3 — everything that only needs household_id
-  const [
-    { active: monthlyCycle, previousId: prevCycleId },
-    categories,
-    lifetimeDebtTxs,
-    savingsConfig,
-    payablesRecords,
-  ] = await withTimeout(
-    Promise.all([
-      getCyclePair(household_id),
-      getHouseholdCategories(household_id),
-      getLifetimeDebtTransactions(household_id),
-      getHouseholdSavingsConfig(household_id),
-      getActivePayables(household_id),
-    ]),
-    5000,
-    "stage3-household-scoped-fetch"
-  )
+const [
+  { active: monthlyCycle, previousId: prevCycleId },
+  categories,
+  lifetimeDebtTxs,
+  savingsConfig,
+  payablesRecords,
+] = await Promise.all([
+  withTimeout(getCyclePair(household_id), 5000, "getCyclePair"),
+  withTimeout(getHouseholdCategories(household_id), 5000, "getHouseholdCategories"),
+  withTimeout(getLifetimeDebtTransactions(household_id), 5000, "getLifetimeDebtTransactions"),
+  withTimeout(getHouseholdSavingsConfig(household_id), 5000, "getHouseholdSavingsConfig"),
+  // Known issue: this call has hung specifically in Firefox with the
+// sleepy-tabs extension enabled (likely tab-freeze interrupting the
+// Supabase connection). Query itself is fast (~0.1ms via EXPLAIN ANALYZE) —
+// not a query/index problem. Confirmed fine in Chrome. Mitigated via
+// withTimeout() + error.tsx redirect. Revisit if it starts happening
+// without the extension or in prod.
+withTimeout(getActivePayables(household_id), 5000, "getActivePayables"),
+  withTimeout(getActivePayables(household_id), 5000, "getActivePayables"),
+])
 
   // Stage 4 — cycle-dependent fetches
   const [currentTxs, prevExpenseTxs] = await withTimeout(

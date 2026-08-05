@@ -25,7 +25,12 @@ export interface ReceivableRecord {
 interface ReceivablesListProps {
   records: ReceivableRecord[]
   householdId: string
-  currentCycleId: string
+  // CHANGED: made optional. This was never used to filter `records` —
+  // it only stamps cycle_id on newly-inserted loan_return rows when a
+  // collection is recorded. Making it required was forcing callers to
+  // pass a cycle_id even in places (like a lifetime/all-cycles debts
+  // view) where there isn't a single "current" cycle to attach.
+  currentCycleId?: string
   createdBy: string
 }
 
@@ -98,7 +103,10 @@ export default function ReceivablesList({
         .from("transactions")
         .insert({
           household_id:           householdId,                 //
-          cycle_id:               currentCycleId,               //
+          // CHANGED: currentCycleId is now optional — fall back to
+          // null when it's not passed in, instead of a hard crash /
+          // implicit `undefined` on the insert payload.
+          cycle_id:               currentCycleId ?? null,       //
           created_by:             createdBy,                    //
           transaction_type:       "loan_return",                //
           payment_account:        selectedLoan.payment_account, // landing target
@@ -221,70 +229,75 @@ export default function ReceivablesList({
       {/* Ledger Table View */}
       {records.length === 0 ? (
         <div className="p-6 text-center text-xs text-gray-400 font-medium bg-gray-50 border border-dashed rounded-lg"> {/* */}
-          Clear ledger — no outstanding receivables for this cycle. {/* */}
+          {/* CHANGED: was "...for this cycle" — records is now
+              household-wide (unpaid loans carry over across cycles),
+              so the old copy was misleading once there actually were
+              zero receivables across all cycles, not just this one. */}
+          Clear ledger — no outstanding receivables. {/* */}
         </div>
       ) : (
         <div className="overflow-x-auto">
-  <table className="w-full text-left border-collapse">
-    <thead>
-      <tr className="border-b border-gray-100 text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-gray-50/50">
-        <th className="py-2.5 px-3">Date Lent</th>
-        <th className="py-2.5 px-3">Borrower</th>
-        <th className="py-2.5 px-3">Description</th>
-        <th className="py-2.5 px-3">Account</th>
-        <th className="py-2.5 px-3">Status</th>
-        <th className="py-2.5 px-3 text-right">Outstanding</th>
-        <th className="py-2.5 px-3 text-center">Action</th>
-      </tr>
-    </thead>
-    <tbody className="divide-y divide-gray-100 text-xs">
-      {records.map((tx) => {
-        const isPartial = tx.loan_status === "partial" //
-        return (
-          <tr key={tx.id} className="hover:bg-gray-50/70 transition-colors">
-            <td className="py-3 px-3 font-medium text-gray-500 whitespace-nowrap">
-              {formatDate(tx.created_at)} {/* */}
-            </td>
-            <td className="py-3 px-3 font-bold text-gray-900">
-              {tx.counterparty_name ?? "—"} {/* */}
-            </td>
-            <td className="py-3 px-3 text-gray-600 max-w-xs truncate" title={tx.description ?? ""}>
-              {tx.description ?? "Lent funds"} {/* */}
-            </td>
-            <td className="py-3 px-3 whitespace-nowrap">
-              <span className="px-2 py-0.5 border text-[10px] rounded font-bold uppercase bg-amber-50 text-amber-700 border-amber-100">
-                {tx.payment_account} {/* */}
-              </span>
-            </td>
-            <td className="py-3 px-3 whitespace-nowrap">
-              <span className={`px-2 py-0.5 border text-[10px] rounded-md font-bold capitalize ${STATUS_STYLES[tx.loan_status]}`}>
-                {tx.loan_status} {/* */}
-              </span>
-            </td>
-            <td className="py-3 px-3 text-right whitespace-nowrap">
-              <span className="font-black tracking-tight text-amber-600 block">
-                {formatCurrency(tx.remaining_amount)} {/* */}
-              </span>
-              {isPartial && ( //
-                <span className="text-[10px] text-gray-400">
-                  of {formatCurrency(tx.amount)} {/* */}
-                </span>
-              )}
-            </td>
-            <td className="py-2 px-3 text-center whitespace-nowrap">
-              <button
-                onClick={() => { setSelectedLoan(tx); setLocalError(null); }} //
-                disabled={isPending} //
-                className="px-2.5 py-1 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition-colors shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                {isPending ? "Saving…" : isPartial ? "Collect Rest" : "Collect"} {/* */}
-              </button>
-            </td>
+  
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="border-b border-gray-100 text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-gray-50/50">
+            <th className="py-2.5 px-3">Date Lent</th>
+            <th className="py-2.5 px-3">Borrower</th>
+            <th className="py-2.5 px-3">Description</th>
+            <th className="py-2.5 px-3">Account</th>
+            <th className="py-2.5 px-3">Status</th>
+            <th className="py-2.5 px-3 text-right">Outstanding</th>
+            <th className="py-2.5 px-3 text-center">Action</th>
           </tr>
-        )
-      })}
-    </tbody>
-  </table>
+        </thead>
+        <tbody className="divide-y divide-gray-100 text-xs">
+          {records.map((tx) => {
+            const isPartial = tx.loan_status === "partial" //
+            return (
+              <tr key={tx.id} className="hover:bg-gray-50/70 transition-colors">
+                <td className="py-3 px-3 font-medium text-gray-500 whitespace-nowrap">
+                  {formatDate(tx.created_at)} {/* */}
+                </td>
+                <td className="py-3 px-3 font-bold text-gray-900">
+                  {tx.counterparty_name ?? "—"} {/* */}
+                </td>
+                <td className="py-3 px-3 text-gray-600 max-w-xs truncate" title={tx.description ?? ""}>
+                  {tx.description ?? "Lent funds"} {/* */}
+                </td>
+                <td className="py-3 px-3 whitespace-nowrap">
+                  <span className="px-2 py-0.5 border text-[10px] rounded font-bold uppercase bg-amber-50 text-amber-700 border-amber-100">
+                    {tx.payment_account} {/* */}
+                  </span>
+                </td>
+                <td className="py-3 px-3 whitespace-nowrap">
+                  <span className={`px-2 py-0.5 border text-[10px] rounded-md font-bold capitalize ${STATUS_STYLES[tx.loan_status]}`}>
+                    {tx.loan_status} {/* */}
+                  </span>
+                </td>
+                <td className="py-3 px-3 text-right whitespace-nowrap">
+                  <span className="font-black tracking-tight text-amber-600 block">
+                    {formatCurrency(tx.remaining_amount)} {/* */}
+                  </span>
+                  {isPartial && ( //
+                    <span className="text-[10px] text-gray-400">
+                      of {formatCurrency(tx.amount)} {/* */}
+                    </span>
+                  )}
+                </td>
+                <td className="py-2 px-3 text-center whitespace-nowrap">
+                  <button
+                    onClick={() => { setSelectedLoan(tx); setLocalError(null); }} //
+                    disabled={isPending} //
+                    className="px-2.5 py-1 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition-colors shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    {isPending ? "Saving…" : isPartial ? "Collect Rest" : "Collect"} {/* */}
+                  </button>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
 </div>
 
       )}

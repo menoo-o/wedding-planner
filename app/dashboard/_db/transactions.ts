@@ -4,7 +4,6 @@ import { createClient } from '@/utils/supabase/server'
 import { CycleCalculationTransaction } from '@/lib/types'
 
 // ── getCycleTransactions ──────────────────────────────────────
-// Fetches all transactions for the active cycle.
 
 export async function getCycleTransactions(
   householdId: string,
@@ -51,9 +50,6 @@ export async function getPrevCycleExpenses(
 }
 
 // ── Receivables ledger ─────────────────────────────────────────
-// One query fetches loan_out + loan_return for the cycle.
-// Split into active (still owed) vs settled (fully repaid) in JS —
-// no second DB round-trip needed for the "see past history" button.
 
 export type ReceivableRecord = {
   id: string
@@ -71,15 +67,16 @@ export type ReceivableRecord = {
 
 export async function getReceivablesLedger(
   householdId: string,
-  cycleId: string
+  _cycleId?: string // Ignored to ensure cross-cycle persistence
 ): Promise<{ active: ReceivableRecord[]; settled: ReceivableRecord[] }> {
   const supabase = await createClient()
 
   const { data: records, error } = await supabase
     .from("transactions")
-    .select("id, amount, transaction_type, payment_account, counterparty_name, description, created_at, notes, related_transaction_id, loan_status")
+    .select(
+      "id, amount, transaction_type, payment_account, counterparty_name, description, created_at, notes, related_transaction_id, loan_status"
+    )
     .eq("household_id", householdId)
-    .eq("cycle_id", cycleId)
     .in("transaction_type", ["loan_out", "loan_return"])
 
   if (error || !records) {
@@ -87,8 +84,9 @@ export async function getReceivablesLedger(
     return { active: [], settled: [] }
   }
 
-  // Map: original loan_out id → total repaid via loan_return rows
+  // Map: parent loan ID -> total amount repaid
   const repaymentsMap = new Map<string, number>()
+
   records
     .filter((tx) => tx.transaction_type === "loan_return" && tx.related_transaction_id)
     .forEach((tx) => {
@@ -99,42 +97,56 @@ export async function getReceivablesLedger(
   const active: ReceivableRecord[] = []
   const settled: ReceivableRecord[] = []
 
-  // Classification rule: transaction_type === "loan_out" → Receivables
   records
     .filter((tx) => tx.transaction_type === "loan_out")
     .forEach((tx) => {
+      const originalAmount = Number(tx.amount)
       const repaid = repaymentsMap.get(tx.id) ?? 0
-      const remaining = Math.max(0, Number(tx.amount) - repaid)
+      const remaining = Math.max(0, originalAmount - repaid)
+
+      // Dynamic status resolution
+      let currentStatus: "pending" | "partial" | "settled" = "pending"
+      if (remaining <= 0) {
+        currentStatus = "settled"
+      } else if (repaid > 0) {
+        currentStatus = "partial"
+      } else {
+        currentStatus = (tx.loan_status as "pending" | "partial" | "settled") || "pending"
+      }
+
       const record: ReceivableRecord = {
         ...tx,
-        amount: Number(tx.amount),
+        amount: originalAmount,
         remaining_amount: remaining,
-        loan_status: tx.loan_status as "pending" | "partial" | "settled",
+        loan_status: currentStatus,
       }
-      const isSettled = tx.loan_status === "settled" || remaining <= 0
-      ;(isSettled ? settled : active).push(record)
+
+      // 🏆 Strict Guard: Only move to settled if remaining is 0
+      if (remaining <= 0 || tx.loan_status === "settled") {
+        settled.push(record)
+      } else {
+        active.push(record)
+      }
     })
 
   const sortDesc = (a: ReceivableRecord, b: ReceivableRecord) =>
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
 
-  return { active: active.sort(sortDesc), settled: settled.sort(sortDesc) }
+  return {
+    active: active.sort(sortDesc),
+    settled: settled.sort(sortDesc),
+  }
 }
 
-// Backward-compatible wrapper — existing callers (e.g. /dashboard/page.tsx)
-// keep working unchanged, still just one DB query under the hood.
 export async function getActiveReceivables(
   householdId: string,
-  cycleId: string
+  _cycleId?: string
 ): Promise<ReceivableRecord[]> {
-  const { active } = await getReceivablesLedger(householdId, cycleId)
+  const { active } = await getReceivablesLedger(householdId)
   return active
 }
 
 // ── Payables ledger ───────────────────────────────────────────
-// One query fetches loan_in + loan_return + settlement + expense.
-// Split into active vs settled, with reimbursements identified by
-// the rule: transaction_type === "expense" && paid_by === "other".
 
 export type PayableRecord = {
   id: string
@@ -167,8 +179,8 @@ export async function getPayablesLedger(
     return { active: [], settled: [] }
   }
 
-  // Map: original loan_in / expense id → total repaid via loan_return / settlement rows
   const repaymentsMap = new Map<string, number>()
+
   records
     .filter((tx) =>
       (tx.transaction_type === "loan_return" || tx.transaction_type === "settlement") &&
@@ -183,41 +195,45 @@ export async function getPayablesLedger(
   const settled: PayableRecord[] = []
 
   records.forEach((tx) => {
-    // Classification rule, as specified:
-    //   loan_out          → Receivables   (handled in getReceivablesLedger)
-    //   loan_in            → Payables
-    //   expense + paid_by === "other" → Reimbursements
     const isLoanPayable = tx.transaction_type === "loan_in"
     const isReimbursement = tx.transaction_type === "expense" && tx.paid_by === "other"
-
-    if (!isLoanPayable && !isReimbursement) return // skip loan_return/settlement rows themselves
+    if (!isLoanPayable && !isReimbursement) return
 
     const original = Number(tx.amount)
     const repaid = isLoanPayable ? (repaymentsMap.get(tx.id) ?? 0) : 0
     const remaining = isLoanPayable ? Math.max(0, original - repaid) : original
-    const status = isLoanPayable ? tx.loan_status : tx.reimbursement_status
+
+    let status = isLoanPayable ? tx.loan_status : tx.reimbursement_status
+    if (isLoanPayable && remaining <= 0) status = "settled"
 
     const record: PayableRecord = {
       ...tx,
       amount: original,
       remaining_amount: remaining,
       transaction_type: tx.transaction_type as "loan_in" | "expense",
-      loan_status: tx.loan_status as "pending" | "partial" | "settled" | null,
+      loan_status: status as "pending" | "partial" | "settled" | null,
       reimbursement_status: tx.reimbursement_status as "pending" | "partial" | "settled" | null,
     }
 
-    const isSettled = status === "settled" || (isLoanPayable && remaining <= 0)
-    ;(isSettled ? settled : active).push(record)
+    if (remaining <= 0 || status === "settled") {
+      settled.push(record)
+    } else {
+      active.push(record)
+    }
   })
 
   const sortDesc = (a: PayableRecord, b: PayableRecord) =>
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
 
-  return { active: active.sort(sortDesc), settled: settled.sort(sortDesc) }
+  return {
+    active: active.sort(sortDesc),
+    settled: settled.sort(sortDesc),
+  }
 }
 
-// Backward-compatible wrapper — existing callers keep working unchanged.
-export async function getActivePayables(householdId: string): Promise<PayableRecord[]> {
+export async function getActivePayables(
+  householdId: string
+): Promise<PayableRecord[]> {
   const { active } = await getPayablesLedger(householdId)
   return active
 }

@@ -4,14 +4,14 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const REDIRECT_DELAY_SECONDS = 5
+const REDIRECT_DELAY_SECONDS = 6
 
 export default function DashboardError({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter()
   const [secondsLeft, setSecondsLeft] = useState(REDIRECT_DELAY_SECONDS)
 
   useEffect(() => {
-    console.error(error) // keep the real error in the console for debugging
+    console.error(error)
   }, [error])
 
   useEffect(() => {

@@ -20,8 +20,6 @@ async function FetchMoneyManagerData() {
   const {
     householdMember,
     monthlyCycle,
-    cash,
-    card,
     total,
     rawTransactions,
   } = await getDashboardData()

@@ -1,3 +1,5 @@
+//app/dashboard/page.tsx
+
 // import { getActiveReceivables, readSupaTables } from "./queries";
 import { Suspense } from "react";
 import DashForm from "./components/ExpenseForm"
@@ -42,6 +44,8 @@ export async function FetchDashboardData() {
     debtLoadRatio, rawTransactions, walletName, savingsBalance,
     receivablesRecords, payablesRecords,
   } = await withTimeout(getDashboardData(), 8000, "getDashboardData")
+
+  console.log(receivables, "Receivables money")
 
   const householdId = householdMember?.household_id ?? ""
   const currentCycleId = monthlyCycle?.id ?? ""
@@ -154,7 +158,6 @@ export async function FetchDashboardData() {
       />
 
 
-
       <AdvancedMetrics 
         receivables={receivables}       // Active money owed to you right now
         payables={payables}             // Active money you owe out right now
@@ -196,7 +199,7 @@ export async function FetchDashboardData() {
        <ReceivablesList 
             records={receivablesRecords} 
             householdId={householdId}
-            currentCycleId={currentCycleId}
+            // currentCycleId={currentCycleId}
             createdBy={createdBy}
           />
      
