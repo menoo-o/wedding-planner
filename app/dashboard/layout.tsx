@@ -59,25 +59,24 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside className="w-64 bg-white flex flex-col fixed h-full border-r border-gray-100/50 z-40">
         {/* Logo */}
-        <div className="p-5 pb-3">
-          <Link href="/dashboard" className="flex items-center gap-3 group">
-            {/* Logo container — constrained for large PNG */}
-            <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-[#8b9dc3]/10 ring-2 ring-[#8b9dc3]/20 group-hover:ring-[#8b9dc3]/40 transition-all">
-              <Image
-                src="/logo-v1.png"
-                alt="Veya"
-                fill
-                className="object-contain p-1"
-                priority
-              />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-[#2d3436] tracking-tight leading-tight">Veya</h1>
-              <p className="text-[10px] text-gray-400 tracking-[0.15em] uppercase font-medium">Simply Finance</p>
-            </div>
-          </Link>
-        </div>
-
+        
+      <div className="p-5 pb-3">
+       <Link href="/dashboard" className="flex items-center gap-3 group">
+  {/* Logo container — overflow visible allows image to pop out */}
+  <div className="relative w-26 h-18 overflow-visible shrink-0 flex items-center justify-center">
+    <Image
+      src="/logo-v1.png"
+      alt="Simply Finance"
+      fill
+      className="object-contain scale-150 origin-center transition-transform duration-300 group-hover:scale-160"
+      priority
+    />
+  </div>
+  <p className="text-[10px] text-gray-400 tracking-[0.15em] uppercase font-medium">
+    Simply Finance
+  </p>
+</Link>
+      </div>
         {/* Main Nav */}
         <nav className="flex-1 px-3 py-2 space-y-0.5">
           {SIDEBAR_NAV.map((item) => (

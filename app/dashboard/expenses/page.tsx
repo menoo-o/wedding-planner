@@ -1,7 +1,6 @@
 // app/dashboard/expenses/page.tsx
 
 import { Suspense } from "react"
-import SqlFilterTrigger from "../components/SqlFilterTrigger"
 import Link from "next/link"
 import {
   Wallet,
@@ -11,12 +10,14 @@ import {
   Clock,
   Search,
   Bell,
-  Filter,
 } from "lucide-react"
 
 import { getDashboardData } from '../_services/dashboard'
-import { getCycleTransactions } from "../_db/transactions"
+import { getCycleTransactions, getTransactionsByType } from "../_db/transactions"
+import { getCyclePair } from "../_db/cycles"
+import { getHouseholdCategories } from "../_db/categories"
 import ActionBar from "../components/ui/ActionBar"
+import ExpensesFilterBar from "../components/ExpensesFilterBar"
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -30,6 +31,8 @@ interface ExpenseTransaction {
   category_name?: string
   created_at: string
   paid_by?: string | null
+  counterparty_name?: string | null
+  reimbursement_status?: string | null
 }
 
 interface DayGroup {
@@ -37,6 +40,14 @@ interface DayGroup {
   label: string
   transactions: ExpenseTransaction[]
   dayTotal: number
+}
+
+interface MonthlyCycle {
+  id: string
+  household_id: string
+  created_at: string
+  is_closed: boolean
+  opening_balance: number
 }
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -86,13 +97,12 @@ function groupByDay(transactions: ExpenseTransaction[]): DayGroup[] {
   })
 }
 
-// Get top 3 categories by spending in current cycle
+// Get top 3 categories by spending
 function getTopCategories(
   transactions: ExpenseTransaction[],
   allCategories: { id: string; name: string }[]
 ) {
   const categoryTotals = new Map<string, number>()
-
   transactions.forEach((tx) => {
     const catId = tx.category_id || "uncategorized"
     categoryTotals.set(catId, (categoryTotals.get(catId) || 0) + tx.amount)
@@ -104,11 +114,7 @@ function getTopCategories(
 
   return sorted.map(([catId, total]) => {
     const cat = allCategories.find((c) => c.id === catId)
-    return {
-      id: catId,
-      name: cat?.name || "General",
-      total,
-    }
+    return { id: catId, name: cat?.name || "General", total }
   })
 }
 
@@ -123,7 +129,7 @@ function ExpensesSkeleton() {
           <div key={i} className="h-28 bg-gray-200 rounded-2xl" />
         ))}
       </div>
-      <div className="h-4 bg-gray-200 rounded-lg w-32 mb-4" />
+      <div className="h-16 bg-gray-200 rounded-xl mb-4" />
       <div className="space-y-3">
         {[...Array(5)].map((_, i) => (
           <div key={i} className="h-16 bg-gray-200 rounded-xl" />
@@ -134,30 +140,41 @@ function ExpensesSkeleton() {
 }
 
 // ── Main Page ─────────────────────────────────────────────────
+
 export default function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>
+  searchParams: Promise<{
+    category?: string
+    payment?: string
+    sort?: string
+    search?: string
+    cycle?: string
+  }>
 }) {
   return (
     <Suspense fallback={<ExpensesSkeleton />}>
-      {/* Pass the searchParams Promise directly into the Suspense boundary */}
       <ExpensesContent searchParams={searchParams} />
     </Suspense>
   )
 }
 
-// ── Data + Content (Awaits runtime searchParams inside Suspense) ──
+// ── Data + Content ────────────────────────────────────────────
 
 async function ExpensesContent({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }> // Accept Promise here
+  searchParams: Promise<{
+    category?: string
+    payment?: string
+    sort?: string
+    search?: string
+    cycle?: string
+  }>
 }) {
-  // Await searchParams inside the Suspense boundary
-  // const resolvedParams = await searchParams
-  // const selectedCategory = resolvedParams.category
-    
+  const params = await searchParams
+
+  // Get auth + household
   const {
     householdMember,
     monthlyCycle,
@@ -175,49 +192,127 @@ async function ExpensesContent({
   const currentCycleId = monthlyCycle?.id ?? ""
   const createdBy = householdMember?.user_id ?? ""
 
-  // Filter to expense transactions only
-const expenseTransactions = (rawTransactions || [])
-  .filter((tx) => tx.transaction_type === "expense")
-  .map((tx) => {
-    const matchingCategory = categories.find((cat) => cat.id === tx.category_id)
-    return {
-      ...tx,
-      category_id: tx.category_id ?? null,
-      category_name: matchingCategory ? matchingCategory.name : "General",
-      created_at: tx.created_at ?? new Date().toISOString(), // 👈 fixes TS2345 on created_at
-    }
-  })
-  // Get top 3 spending categories (current cycle)
+  // Fetch all household cycles for the cycle selector
+  const supabase = (await import("@/utils/supabase/server")).createClient
+  const { data: allCycles } = await (await supabase())
+    .from("monthly_cycles")
+    .select("id, created_at, is_closed")
+    .eq("household_id", householdId)
+    .order("created_at", { ascending: false })
+
+  const cycles: MonthlyCycle[] = (allCycles || []).map((c: any) => ({
+    id: c.id,
+    household_id: householdId,
+    created_at: c.created_at,
+    is_closed: c.is_closed,
+    opening_balance: c.opening_balance ?? 0,
+  }))
+
+  // Determine which cycle to show
+  const selectedCycleId = params.cycle || currentCycleId
+  const isCurrentCycle = selectedCycleId === currentCycleId
+
+  // Fetch transactions for the selected cycle
+  let cycleTransactions = rawTransactions
+  if (!isCurrentCycle && selectedCycleId) {
+    const txs = await getCycleTransactions(householdId, selectedCycleId)
+    cycleTransactions = txs
+  }
+
+  // Build expense transactions with category names
+  const expenseTransactions: ExpenseTransaction[] = (cycleTransactions || [])
+    .filter((tx) => tx.transaction_type === "expense")
+    .map((tx) => {
+      const matchingCategory = categories.find((cat) => cat.id === tx.category_id)
+      return {
+        id: tx.id,
+        amount: tx.amount,
+        transaction_type: tx.transaction_type,
+        payment_account: tx.payment_account,
+        description: tx.description || "",
+        category_id: tx.category_id ?? null,
+        category_name: matchingCategory ? matchingCategory.name : "General",
+        created_at: tx.created_at ?? new Date().toISOString(),
+        paid_by: tx.paid_by ?? null,
+        counterparty_name: tx.counterparty_name ?? null,
+        reimbursement_status: tx.reimbursement_status ?? null,
+      }
+    })
+
+  // Get top 3 spending categories
   const topCategories = getTopCategories(expenseTransactions, categories)
 
-  // Build tabs: All + top 3 categories + Reimbursements
+  // Build category tabs
   const categoryTabs = [
     { id: "all", name: "All expenses" },
     ...topCategories.map((c) => ({ id: c.id, name: c.name })),
     { id: "reimbursements", name: "Reimbursements" },
   ]
 
-  // Filter transactions based on active tab
-  const activeCategory = (await searchParams).category || "all"
-  let filteredTransactions = expenseTransactions
+  // ── Apply ALL filters from searchParams ───────────────────
 
+  let filtered = [...expenseTransactions]
+
+  // 1. Category filter (from tabs)
+  const activeCategory = params.category || "all"
   if (activeCategory === "reimbursements") {
-    filteredTransactions = expenseTransactions.filter(
-      (tx) => tx.paid_by === "someone_else"
-    )
+    filtered = filtered.filter((tx) => tx.paid_by === "someone_else")
   } else if (activeCategory !== "all") {
-    filteredTransactions = expenseTransactions.filter(
-      (tx) => tx.category_id === activeCategory
+    filtered = filtered.filter((tx) => tx.category_id === activeCategory)
+  }
+
+  // 2. Payment source filter
+  const activePayment = params.payment
+  if (activePayment && activePayment !== "all") {
+    filtered = filtered.filter((tx) => tx.payment_account === activePayment)
+  }
+
+  // 3. Search filter (description or counterparty)
+  const searchQuery = params.search
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase()
+    filtered = filtered.filter(
+      (tx) =>
+        tx.description.toLowerCase().includes(q) ||
+        (tx.counterparty_name?.toLowerCase() || "").includes(q) ||
+        (tx.category_name?.toLowerCase() || "").includes(q)
     )
   }
 
-  const groupedExpenses = groupByDay(filteredTransactions)
+  // 4. Sort
+  const sortOption = params.sort || "date_newest"
+  switch (sortOption) {
+    case "date_oldest":
+      filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      break
+    case "amount_high_low":
+      filtered.sort((a, b) => b.amount - a.amount)
+      break
+    case "amount_low_high":
+      filtered.sort((a, b) => a.amount - b.amount)
+      break
+    case "pending_first":
+      filtered.sort((a, b) => {
+        const aPending = a.reimbursement_status === "pending" ? 1 : 0
+        const bPending = b.reimbursement_status === "pending" ? 1 : 0
+        return bPending - aPending || new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      })
+      break
+    default: // date_newest
+      filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  }
 
-  // Stats
+  const groupedExpenses = groupByDay(filtered)
+
+  // Stats (based on selected cycle)
+  const selectedCycleExpenses = filtered.reduce((sum, tx) => sum + tx.amount, 0)
   const obligationCount = receivablesRecords.length + payablesRecords.length
   const velocityRatio = previousExpenses > 0 ? currentExpenses / previousExpenses : 0
   const isBurningFaster = velocityRatio > 1
   const totalLiquidity = cash + card
+  const daysInCycle = monthlyCycle
+    ? Math.max(1, Math.floor((Date.now() - new Date(monthlyCycle.created_at).getTime()) / (1000 * 60 * 60 * 24)))
+    : 30
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -226,12 +321,12 @@ const expenseTransactions = (rawTransactions || [])
         <div>
           <h1 className="text-2xl font-bold text-[#2d3436]">Expenses</h1>
           <p className="text-sm text-gray-400 mt-0.5">
-           {monthlyCycle?.created_at
-            ? new Date(monthlyCycle.created_at).toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })
-            : "No active cycle"}
+            {monthlyCycle?.created_at
+              ? new Date(monthlyCycle.created_at).toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })
+              : "No active cycle"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -268,7 +363,9 @@ const expenseTransactions = (rawTransactions || [])
             <TrendingDown size={14} strokeWidth={1.5} />
             <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">Total spend</span>
           </div>
-          <p className="text-2xl font-bold text-[#e17055]">-Rs {currentExpenses.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-[#e17055]">
+            -Rs {selectedCycleExpenses.toLocaleString()}
+          </p>
           <p className="text-xs text-gray-400 mt-2">
             {previousExpenses > 0 ? (
               <span className={isBurningFaster ? "text-[#e17055]" : "text-[#00b894]"}>
@@ -280,7 +377,7 @@ const expenseTransactions = (rawTransactions || [])
           </p>
         </div>
 
-        {/* Pending Payables — SWAPPED to position 2 */}
+        {/* Pending Payables */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center gap-2 text-gray-400 mb-3">
             <Scale size={14} strokeWidth={1.5} />
@@ -308,45 +405,49 @@ const expenseTransactions = (rawTransactions || [])
           </div>
         </div>
 
-        {/* Burn Rate — SWAPPED to position 4 */}
+        {/* Burn Rate */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center gap-2 text-gray-400 mb-3">
             <Clock size={14} strokeWidth={1.5} />
             <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">Burn rate</span>
           </div>
           <p className="text-2xl font-bold text-[#2d3436]">
-            Rs {Math.round(currentExpenses / 30).toLocaleString()}
+            Rs {Math.round(selectedCycleExpenses / Math.max(daysInCycle, 1)).toLocaleString()}
           </p>
           <p className="text-xs text-gray-400 mt-2">per day this cycle</p>
         </div>
       </div>
 
+      {/* ── Filter Bar (Client Component with URL sync) ──────── */}
+      <ExpensesFilterBar
+        cycles={cycles}
+        categories={categories}
+        currentCycleId={currentCycleId}
+        activeCategory={activeCategory}
+        activePayment={activePayment || "all"}
+        activeSort={sortOption}
+        searchQuery={searchQuery || ""}
+      />
+
       {/* ── Category Tabs ─────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl">
-          {categoryTabs.map((tab) => {
-            const isActive = activeCategory === tab.id
-            return (
-              <Link
-                key={tab.id}
-                href={`/dashboard/expenses?category=${tab.id}`}
-                scroll={false}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? "bg-white text-[#2d3436] shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                {tab.name}
-              </Link>
-            )
-          })}
-        </div>
-        {/* <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-all" onClick={() => setShowSqlEditor((prev) => !prev)}>
-          <Filter size={14} strokeWidth={1.5} />
-          Filter
-        </button> */}
-        <SqlFilterTrigger />
+      <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl mt-6 mb-6 w-fit">
+        {categoryTabs.map((tab) => {
+          const isActive = activeCategory === tab.id
+          return (
+            <Link
+              key={tab.id}
+              href={`/dashboard/expenses?${buildQueryString({ ...params, category: tab.id === "all" ? undefined : tab.id })}`}
+              scroll={false}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                isActive
+                  ? "bg-white text-[#2d3436] shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {tab.name}
+            </Link>
+          )
+        })}
       </div>
 
       {/* ── Expense List Grouped by Day ──────────────────────── */}
@@ -371,7 +472,6 @@ const expenseTransactions = (rawTransactions || [])
                   } hover:bg-gray-50/50 transition-colors cursor-pointer group`}
                 >
                   <div className="flex items-center gap-4">
-                    {/* Category Icon Circle */}
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{
@@ -401,6 +501,14 @@ const expenseTransactions = (rawTransactions || [])
                         <span className="text-xs text-gray-400 capitalize">
                           {tx.payment_account}
                         </span>
+                        {tx.reimbursement_status === "pending" && (
+                          <>
+                            <span className="text-gray-300">·</span>
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+                              Pending
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -427,15 +535,30 @@ const expenseTransactions = (rawTransactions || [])
               <TrendingDown size={24} strokeWidth={1.5} className="text-gray-300" />
             </div>
             <p className="text-gray-400 text-sm">
-              {activeCategory === "all"
+              {activeCategory === "all" && !searchQuery
                 ? "No expenses recorded this cycle"
-                : `No expenses in this category`}
+                : "No expenses match your filters"}
             </p>
+            {(activeCategory !== "all" || searchQuery) && (
+              <Link
+                href="/dashboard/expenses"
+                className="inline-block mt-3 text-sm text-[#8b9dc3] hover:text-[#6c7a95] transition-colors"
+              >
+                Clear all filters
+              </Link>
+            )}
           </div>
         )}
       </div>
     </div>
   )
+}
+
+// ── Query String Builder ────────────────────────────────────
+
+function buildQueryString(params: Record<string, string | undefined>): string {
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== "")
+  return entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v!)}`).join("&")
 }
 
 // ── Category Helpers ────────────────────────────────────────
@@ -453,13 +576,11 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 function getCategoryColor(categoryName: string = "General"): string {
-  const key = categoryName.toLowerCase()
-  return CATEGORY_COLORS[key] || CATEGORY_COLORS["general"]
+  return CATEGORY_COLORS[categoryName.toLowerCase()] || CATEGORY_COLORS["general"]
 }
 
 function getCategoryIcon(categoryName: string = "General") {
   const name = categoryName.toLowerCase()
-
   const icons: Record<string, JSX.Element> = {
     groceries: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -502,7 +623,6 @@ function getCategoryIcon(categoryName: string = "General") {
       </svg>
     ),
   }
-
   return icons[name] || (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>
