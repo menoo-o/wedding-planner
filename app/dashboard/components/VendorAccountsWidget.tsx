@@ -38,15 +38,14 @@ interface VendorAccountsProps {
   createdBy: string
   cashBalance: number // 💳 Used for client-side settlement validation
   cardBalance: number
-  categories: Category[] // 🥛 Add this line to the interface!
-  vendors: any[] // your existing vendor type definition
+  categories?: Category[] // 🥛 Optional — component works with an empty list
 }
 
 
 export default function VendorAccountsWidget({
   householdId,
   currentCycleId,
- categories = [],
+  categories = [],
   createdBy,
   cashBalance,
   cardBalance,
@@ -68,8 +67,11 @@ export default function VendorAccountsWidget({
 
   const fetchVendorsAndBalances = useCallback(async () => {
     try {
-      setLoading(true)
-      
+      // 🚀 Don't call setLoading(true) here — since this function runs synchronously
+      // up to its first `await`, calling setState directly inside the useEffect body
+      // triggers React's "cascading renders" warning. `loading` already starts `true`
+      // on mount; we only need to flip it back on for subsequent manual refetches.
+
       // 1. Fetch all vendors linked to this household
       const { data: vendorData, error: vendorErr } = await supabase
         .from("vendors")
@@ -100,6 +102,9 @@ export default function VendorAccountsWidget({
       // 3. Compute balances on-the-fly to guarantee perfect mathematical synchrony
       const balanceMap: Record<string, number> = {}
       txData?.forEach(tx => {
+        // 🚀 vendor_id can be `string | null` from Supabase — skip rows with no vendor link
+        // rather than using a nullable value as an object key (TS error otherwise).
+        if (!tx.vendor_id) return
         balanceMap[tx.vendor_id] = (balanceMap[tx.vendor_id] || 0) + Number(tx.amount || 0)
       })
 
@@ -109,8 +114,8 @@ export default function VendorAccountsWidget({
       }))
 
       setVendors(vendorsWithBalances)
-    } catch (err: any) {
-      console.error("Error loading vendors:", err.message)
+    } catch (err: unknown) {
+      console.error("Error loading vendors:", err instanceof Error ? err.message : "Unknown error")
     } finally {
       setLoading(false)
     }
@@ -138,8 +143,8 @@ export default function VendorAccountsWidget({
       if (error) throw error
 
       setPendingTxs(data || [])
-    } catch (err: any) {
-      setActionError(`Failed to load statements: ${err.message}`)
+    } catch (err: unknown) {
+      setActionError(`Failed to load statements: ${err instanceof Error ? err.message : "Unknown error"}`)
     } finally {
       setDetailsLoading(false)
     }
@@ -183,7 +188,12 @@ export default function VendorAccountsWidget({
         .select("id")
         .single()
 
-      if (settlementErr || !settlementTx) throw settlementErr
+      // 🚀 settlementErr can be null even if settlementTx is missing (e.g. RLS silently
+      // returning no row) — throwing settlementErr directly would then throw `null`,
+      // which crashes `err.message` access in the catch block below.
+      if (settlementErr || !settlementTx) {
+        throw new Error(settlementErr?.message || "Settlement insert returned no record.")
+      }
 
       // B. Stamp all unpaid entries to point to this settlement transaction ID
 const { error: stampErr } = await supabase
@@ -196,7 +206,7 @@ const { error: stampErr } = await supabase
       // Fail-Safe: Manual rollback protection to prevent balance leaks
       if (stampErr) {
         await supabase.from("transactions").delete().eq("id", settlementTx.id)
-        throw stampErr
+        throw new Error(stampErr.message)
       }
 
       setActionErrorSuccess(`Account with ${selectedVendor.name} settled successfully!`)
@@ -204,10 +214,11 @@ const { error: stampErr } = await supabase
       setPendingTxs([])
       
       // Refresh database records and propagate state updates
+      setLoading(true)
       await fetchVendorsAndBalances()
       router.refresh()
-    } catch (err: any) {
-      setActionError(`Settlement failed: ${err.message}`)
+    } catch (err: unknown) {
+      setActionError(`Settlement failed: ${err instanceof Error ? err.message : "Unknown error"}`)
     } finally {
       setIsSettling(false)
     }

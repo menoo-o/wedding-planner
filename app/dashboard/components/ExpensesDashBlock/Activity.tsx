@@ -66,7 +66,7 @@ export default function RecentExpenses({ transactions = [], currentExpensesTotal
             Total Cycle Outflow: <strong style={{ color: '#18181b' }}>Rs. {currentExpensesTotal.toLocaleString()}</strong>
           </p>
         </div>
-        <a href="/dashboard/expense" style={{ fontSize: '13px', color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>
+        <a href="/dashboard/expenses" style={{ fontSize: '13px', color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>
           See more &rarr;
         </a>
       </div>

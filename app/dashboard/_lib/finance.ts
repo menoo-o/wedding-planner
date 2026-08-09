@@ -1,183 +1,167 @@
 // app/dashboard/_lib/finance.ts
 
+import { 
+  LifetimeDebtTransaction, 
+  CycleCalculationTransaction, 
+  ReceivableRecord,
+  LoanStatus 
+} from "@/lib/types";
+import { buildRepaymentsMap, calcRemaining } from "./ledger";
+
 // ── Interfaces ────────────────────────────────────────────────
 
-import {LifetimeDebtTransaction, CycleCalculationTransaction, ReceivableRecord} from "@/lib/types"
-
-
 export interface BalanceResult {
-  cashBalance: number
-  cardBalance: number
-  currentExpenses: number
+  cashBalance: number;
+  cardBalance: number;
+  currentExpenses: number;
 }
 
 export interface DebtResult {
-  receivables: number
-  payables: number
+  receivables: number;
+  payables: number;
 }
 
 // ── computeBalances ───────────────────────────────────────────
-// No change needed here — balance movement is per-transaction
-// and doesn't depend on whether a loan is partial or settled.
 
 export function computeBalances(
   transactions: CycleCalculationTransaction[],
   openingBalance: number
 ): BalanceResult {
-  let cashBalance = openingBalance
-  let cardBalance = 0
-  let currentExpenses = 0
+  let cashBalance = openingBalance;
+  let cardBalance = 0;
+  let currentExpenses = 0;
 
-  transactions.forEach((tx) => {
-    const amt = tx.amount
+  for (const tx of transactions) {
+    const amt = tx.amount;
 
     // Inflows
-    if (
-      tx.transaction_type === "top_up" ||
-      tx.transaction_type === "loan_return" ||
-      tx.transaction_type === "loan_in"
-    ) {
-      if (tx.payment_account === "cash") cashBalance += amt
-      if (tx.payment_account === "card") cardBalance += amt
+    if (["top_up", "loan_return", "loan_in"].includes(tx.transaction_type)) {
+      if (tx.payment_account === "cash") cashBalance += amt;
+      if (tx.payment_account === "card") cardBalance += amt;
     }
     // Outflows
-    else if (
-      tx.transaction_type === "expense" ||
-      tx.transaction_type === "settlement" ||
-      tx.transaction_type === "loan_out"
-    ) {
-      // personal account = paid by someone else, doesn't touch house wallets
-      if (tx.payment_account === "cash") cashBalance -= amt
-      if (tx.payment_account === "card") cardBalance -= amt
-
-      if (tx.transaction_type === "expense") currentExpenses += amt
+    else if (["expense", "settlement", "loan_out"].includes(tx.transaction_type)) {
+      if (tx.payment_account === "cash") cashBalance -= amt;
+      if (tx.payment_account === "card") cardBalance -= amt;
+      if (tx.transaction_type === "expense") currentExpenses += amt;
     }
-    // Internal vault transfer — direction encoded in description
+    // Internal vault transfer
     else if (tx.transaction_type === "transfer") {
-      const sig = tx.description?.toLowerCase() ?? ""
-      const isIn  = sig.includes("transfer in")
-      const isOut = sig.includes("transfer out")
+      const sig = tx.description?.toLowerCase() ?? "";
+      const isIn = sig.includes("transfer in");
+      const isOut = sig.includes("transfer out");
 
       if (tx.payment_account === "cash") {
-        if (isIn)  cashBalance += amt
-        if (isOut) cashBalance -= amt
+        cashBalance += isIn ? amt : isOut ? -amt : 0;
       }
       if (tx.payment_account === "card") {
-        if (isIn)  cardBalance += amt
-        if (isOut) cardBalance -= amt
+        cardBalance += isIn ? amt : isOut ? -amt : 0;
       }
     }
-  })
+  }
 
-  return { cashBalance, cardBalance, currentExpenses }
+  return { cashBalance, cardBalance, currentExpenses };
 }
 
 // ── computeLifetimeDebt ───────────────────────────────────────
-// CHANGED: replaced binary "resolved IDs" Set with a repayments
-// map so partial repayments are subtracted rather than zeroed out.
-//
-// Old approach: if a loan_return exists → exclude the loan entirely.
-// New approach: sum all repayments against each loan → remaining = original - repaid.
 
-export function computeLifetimeDebt(transactions: LifetimeDebtTransaction[]): DebtResult {
-  // Build a map: original loan id → total amount repaid so far (across all partials)
-  const repaymentsMap = new Map<string, number>()
+export function computeLifetimeDebt(
+  transactions: LifetimeDebtTransaction[]
+): DebtResult {
+  const repaymentsMap = buildRepaymentsMap(transactions);
 
-  transactions.forEach((tx) => {
-    if (
-      (tx.transaction_type === "loan_return" || tx.transaction_type === "settlement") &&
-      tx.related_transaction_id
-    ) {
-      const prev = repaymentsMap.get(tx.related_transaction_id) ?? 0
-      repaymentsMap.set(tx.related_transaction_id, prev + tx.amount)
-    }
-  })
+  let receivables = 0;
+  let payables = 0;
 
-  // Accumulate remaining balances for each originating loan
-  let receivables = 0
-  let payables = 0
+  for (const tx of transactions) {
+    // Skip repayments and settled loans
+    if (tx.transaction_type === "loan_return" || tx.transaction_type === "settlement") continue;
+    if (tx.loan_status === "settled") continue;
 
-  transactions.forEach((tx) => {
-    // Skip repayment rows themselves — only process the originating loans
-    if (tx.transaction_type === "loan_return" || tx.transaction_type === "settlement") return
-    // Skip anything the DB has already marked fully settled
-    if (tx.loan_status === "settled") return
+    const repaid = repaymentsMap.get(tx.id) ?? 0;
+    const remaining = tx.amount - repaid;
 
-    const repaid    = repaymentsMap.get(tx.id) ?? 0
-    const remaining = tx.amount - repaid
+    if (remaining <= 0) continue;
 
-    if (remaining <= 0) return // fully covered by repayments even if DB hasn't updated yet
+    if (tx.transaction_type === "loan_out") receivables += remaining;
+    if (tx.transaction_type === "loan_in") payables += remaining;
+  }
 
-    if (tx.transaction_type === "loan_out") receivables += remaining
-    if (tx.transaction_type === "loan_in")  payables   += remaining
-  })
-
-  return { receivables, payables }
+  return { receivables, payables };
 }
 
 // ── computeRunway ─────────────────────────────────────────────
-// Unchanged — still falls back to prior-cycle burn if needed.
 
 export function computeRunway(
   totalLiquidity: number,
   currentExpenses: number,
   previousExpenses: number
 ): number {
-  const burn = currentExpenses > 0 ? currentExpenses : previousExpenses > 0 ? previousExpenses : 0
-  return burn > 0 ? totalLiquidity / burn : Infinity
+  const burn = currentExpenses > 0 
+    ? currentExpenses 
+    : previousExpenses > 0 
+      ? previousExpenses 
+      : 0;
+  return burn > 0 ? totalLiquidity / burn : Infinity;
 }
 
 // ── computeDebtLoadRatio ──────────────────────────────────────
 
-export function computeDebtLoadRatio(payables: number, totalLiquidity: number): number {
-  if (totalLiquidity > 0) return (payables / totalLiquidity) * 100
-  return payables > 0 ? 100 : 0
+export function computeDebtLoadRatio(
+  payables: number, 
+  totalLiquidity: number
+): number {
+  if (totalLiquidity > 0) return (payables / totalLiquidity) * 100;
+  return payables > 0 ? 100 : 0;
 }
 
+// ── deriveReceivablesLedger ───────────────────────────────────
+// DEPRECATED: Use getReceivablesLedger() from _db/transactions.ts instead
+// Kept for backward compat if any other code uses it, but marked deprecated
 
+/**
+ * @deprecated Use getReceivablesLedger() from _db/transactions.ts for cross-cycle data
+ */
 export function deriveReceivablesLedger(
   currentTxs: CycleCalculationTransaction[]
 ): { active: ReceivableRecord[]; settled: ReceivableRecord[] } {
   const records = currentTxs.filter((tx) =>
     tx.transaction_type === "loan_out" || tx.transaction_type === "loan_return"
-  )
+  );
 
-  const repaymentsMap = new Map<string, number>()
-  records
-    .filter((tx) => tx.transaction_type === "loan_return" && tx.related_transaction_id)
-    .forEach((tx) => {
-      const prev = repaymentsMap.get(tx.related_transaction_id!) ?? 0
-      repaymentsMap.set(tx.related_transaction_id!, prev + Number(tx.amount))
-    })
+  const repaymentsMap = buildRepaymentsMap(records);
+  const active: ReceivableRecord[] = [];
+  const settled: ReceivableRecord[] = [];
 
-  const active: ReceivableRecord[] = []
-  const settled: ReceivableRecord[] = []
+  for (const tx of records) {
+    if (tx.transaction_type !== "loan_out") continue;
 
-  records
-    .filter((tx) => tx.transaction_type === "loan_out")
-    .forEach((tx) => {
-      const repaid = repaymentsMap.get(tx.id) ?? 0
-      const remaining = Math.max(0, Number(tx.amount) - repaid)
-      const record: ReceivableRecord = {
-        id: tx.id,
-        amount: Number(tx.amount),
-        remaining_amount: remaining,
-        loan_status: tx.loan_status as "pending" | "partial" | "settled",
-        transaction_type: tx.transaction_type,
-        payment_account: tx.payment_account,
-        counterparty_name: tx.counterparty_name ?? null,
-        description: tx.description,
-        created_at: tx.created_at ?? "",
-        notes: tx.notes ?? null,
-        related_transaction_id: tx.related_transaction_id,
-      }
-      const isSettled = tx.loan_status === "settled" || remaining <= 0
-      ;(isSettled ? settled : active).push(record)
-    })
+    const repaid = repaymentsMap.get(tx.id) ?? 0;
+    const remaining = calcRemaining(Number(tx.amount), repaid);
+
+    const record: ReceivableRecord = {
+      id: tx.id,
+      amount: Number(tx.amount),
+      remaining_amount: remaining,
+      loan_status: (tx.loan_status as LoanStatus) || "pending",
+      transaction_type: tx.transaction_type,
+      payment_account: tx.payment_account,
+      counterparty_name: tx.counterparty_name ?? null,
+      description: tx.description,
+      created_at: tx.created_at ?? "",
+      notes: tx.notes ?? null,
+      related_transaction_id: tx.related_transaction_id,
+    };
+
+    const isSettled = tx.loan_status === "settled" || remaining <= 0;
+    (isSettled ? settled : active).push(record);
+  }
 
   const sortDesc = (a: ReceivableRecord, b: ReceivableRecord) =>
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 
-  return { active: active.sort(sortDesc), settled: settled.sort(sortDesc) }
+  return { 
+    active: active.sort(sortDesc), 
+    settled: settled.sort(sortDesc) 
+  };
 }
-

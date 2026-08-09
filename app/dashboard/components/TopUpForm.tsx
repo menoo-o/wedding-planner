@@ -1,11 +1,11 @@
 // app/dashboard/components/TopUpForm.tsx
 "use client"
-"use no memo"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
+import { Wallet, CreditCard, Info, Plus } from "lucide-react"
 
 type TopUpFormData = {
   household_id: string
@@ -13,31 +13,37 @@ type TopUpFormData = {
   created_by: string
   amount: number
   description: string
-  transaction_date: string 
+  transaction_date: string
   payment_account: "cash" | "card"
 }
 
 function getTodayString() {
-  const today = new Date();
-  return today.toISOString().split("T")[0];
+  const today = new Date()
+  return today.toISOString().split("T")[0]
 }
 
 interface TopUpFormProps {
   householdId: string
   currentCycleId: string
   createdBy: string
+  onSuccess?: () => void
 }
 
-export default function TopUpForm({ householdId, currentCycleId, createdBy }: TopUpFormProps) {
+export default function TopUpForm({
+  householdId,
+  currentCycleId,
+  createdBy,
+  onSuccess,
+}: TopUpFormProps) {
   const supabase = createClient()
   const router = useRouter()
-  const [isOpen, setIsOpen] = useState(false)
 
   const {
     register,
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<TopUpFormData>({
     defaultValues: {
@@ -47,14 +53,13 @@ export default function TopUpForm({ householdId, currentCycleId, createdBy }: To
       amount: undefined,
       description: "",
       transaction_date: getTodayString(),
-      payment_account: "cash", // Defaults to depositing into physical cash box
-    }
+      payment_account: "cash",
+    },
   })
 
-  // Synchronize form states the second page context resolves
   useEffect(() => {
-    reset((prevValues) => ({
-      ...prevValues,
+    reset((prev) => ({
+      ...prev,
       household_id: householdId,
       cycle_id: currentCycleId,
       created_by: createdBy,
@@ -63,40 +68,35 @@ export default function TopUpForm({ householdId, currentCycleId, createdBy }: To
 
   async function onSubmit(data: TopUpFormData) {
     if (!data.cycle_id || !data.household_id) {
-      console.error("Submission Blocked: Missing active ledger identifiers.")
+      console.error("Missing active ledger identifiers.")
       return
     }
 
     const chosenDate = new Date(data.transaction_date)
     const now = new Date()
-    
+
     if (data.transaction_date === getTodayString()) {
       chosenDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds())
     } else {
       chosenDate.setHours(12, 0, 0)
     }
 
-    // Map properties explicitly to your Top Up layout expectations
     const cleanPayload = {
       household_id: data.household_id,
       cycle_id: data.cycle_id,
       created_by: data.created_by,
-      transaction_type: "top_up", // Hardcoded structural token
+      transaction_type: "top_up",
       amount: data.amount,
       description: data.description.trim(),
       created_at: chosenDate.toISOString(),
       payment_account: data.payment_account,
-      
-      // Forces explicit nulls for values not used during deposits
       category_id: null,
       counterparty_name: null,
       paid_by: null,
       notes: null,
     }
 
-    const { error } = await supabase
-      .from("transactions")
-      .insert(cleanPayload)
+    const { error } = await supabase.from("transactions").insert(cleanPayload)
 
     if (error) {
       console.error("Supabase Write Error:", error.message)
@@ -112,119 +112,143 @@ export default function TopUpForm({ householdId, currentCycleId, createdBy }: To
       transaction_date: getTodayString(),
       payment_account: "cash",
     })
-    
-    setIsOpen(false)
+
+    onSuccess?.()
     router.refresh()
   }
 
+  const selectedAccount = watch("payment_account")
+
   return (
-    <>
-      {/* High-Conformity Green Addition Button */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-sm text-sm"
-      >
-        + Add Deposit
-      </button>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <input type="hidden" {...register("household_id")} />
+      <input type="hidden" {...register("cycle_id")} />
+      <input type="hidden" {...register("created_by")} />
 
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-md w-full shadow-2xl relative">
-            
-            <button 
-              onClick={() => setIsOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
-              ✕
-            </button>
+      {/* Date */}
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1.5">Date</label>
+        <input
+          type="date"
+          {...register("transaction_date", { required: "Date is required" })}
+          suppressHydrationWarning
+          className="w-full h-11 px-3.5 border border-gray-200 rounded-xl text-[15px] text-[#2d3436] outline-none focus:border-[#2d3436] focus:ring-[3px] focus:ring-black/[0.04] transition-all"
+        />
+      </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 p-6">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">Add Deposit (Top Up)</h2>
-                <p className="text-xs text-gray-500">Injects funding liquidity directly into the active cycle.</p>
-              </div>
-
-              {/* Hidden System State Bindings */}
-              <input type="hidden" {...register("household_id")} />
-              <input type="hidden" {...register("cycle_id")} />
-              <input type="hidden" {...register("created_by")} />
-
-              {/* Date Input */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Deposit Date *</label>
-                <input
-                  type="date"
-                  {...register("transaction_date", { required: "Date is required" })}
-                  suppressHydrationWarning
-                  className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-green-500"
-                />
-              </div>
-
-              {/* Amount Input */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Amount *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  {...register("amount", { 
-                    required: "Amount is required",
-                    valueAsNumber: true,
-                    validate: (val) => val > 0 || "Deposit must be greater than 0"
-                  })}
-                  className="w-full border border-gray-300 p-2 rounded-lg text-base font-medium outline-none focus:ring-2 focus:ring-green-500"
-                />
-                {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
-              </div>
-
-              {/* Destination Account Selection */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Account</label>
-                <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
-                  <label className={`flex-1 text-center py-1.5 rounded-md cursor-pointer text-xs font-medium transition-all ${watch("payment_account") === "cash" ? "bg-white text-green-600 shadow-sm" : "text-gray-500"}`}>
-                    <input type="radio" value="cash" {...register("payment_account")} className="sr-only" />
-                    Cash Wallet
-                  </label>
-                  <label className={`flex-1 text-center py-1.5 rounded-md cursor-pointer text-xs font-medium transition-all ${watch("payment_account") === "card" ? "bg-white text-green-600 shadow-sm" : "text-gray-500"}`}>
-                    <input type="radio" value="card" {...register("payment_account")} className="sr-only" />
-                    Bank Card
-                  </label>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Source / Description *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Monthly salary pool, cash injection"
-                  {...register("description", { required: "Please describe the source of this funding" })}
-                  className="w-full border border-gray-300 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
-                />
-                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
-              </div>
-
-              {/* Form Actions */}
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded-lg text-sm transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition-colors text-sm shadow-sm"
-                >
-                  {isSubmitting ? "Processing..." : "Add Deposit"}
-                </button>
-              </div>
-            </form>
-          </div>
+      {/* Amount */}
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1.5">Amount</label>
+        <div className="relative">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[13px] font-medium text-gray-400 pointer-events-none">
+            Rs
+          </span>
+          <input
+            type="number"
+            step="0.01"
+            placeholder="0.00"
+            autoFocus
+            {...register("amount", {
+              required: "Amount is required",
+              valueAsNumber: true,
+              validate: (val) => val > 0 || "Deposit must be greater than 0",
+            })}
+            className={`w-full h-[52px] pl-11 pr-3.5 border rounded-xl text-[22px] font-medium tabular-nums outline-none transition-all ${
+              errors.amount
+                ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                : "border-gray-200 focus:border-[#2d3436] focus:ring-[3px] focus:ring-black/[0.04]"
+            }`}
+          />
         </div>
-      )}
-    </>
+        {errors.amount ? (
+          <p className="text-red-500 text-xs mt-1.5">{errors.amount.message}</p>
+        ) : (
+          <div className="flex items-center gap-1.5 mt-1.5">
+            <Info size={12} strokeWidth={1.8} className="text-gray-300 flex-shrink-0" />
+            <span className="text-xs text-gray-400">Deposit must be greater than 0</span>
+          </div>
+        )}
+      </div>
+
+      {/* Destination Account */}
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1.5">
+          Destination account
+        </label>
+        <div className="flex gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
+          <button
+            type="button"
+            onClick={() => setValue("payment_account", "cash")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[13px] font-medium transition-all ${
+              selectedAccount === "cash"
+                ? "bg-white text-[#2d3436] shadow-sm"
+                : "text-gray-400 hover:text-gray-500"
+            }`}
+          >
+            <Wallet size={16} strokeWidth={1.8} />
+            Cash wallet
+          </button>
+          <button
+            type="button"
+            onClick={() => setValue("payment_account", "card")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[13px] font-medium transition-all ${
+              selectedAccount === "card"
+                ? "bg-white text-[#2d3436] shadow-sm"
+                : "text-gray-400 hover:text-gray-500"
+            }`}
+          >
+            <CreditCard size={16} strokeWidth={1.8} />
+            Bank card
+          </button>
+        </div>
+      </div>
+
+      {/* Description */}
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1.5">
+          Source / description
+        </label>
+        <input
+          type="text"
+          placeholder="e.g. Monthly salary, cash injection..."
+          {...register("description", {
+            required: "Please describe the source of this funding",
+          })}
+          className={`w-full h-11 px-3.5 border rounded-xl text-[15px] outline-none transition-all ${
+            errors.description
+              ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+              : "border-gray-200 focus:border-[#2d3436] focus:ring-[3px] focus:ring-black/[0.04]"
+          }`}
+        />
+        {errors.description && (
+          <p className="text-red-500 text-xs mt-1.5">{errors.description.message}</p>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2.5 pt-2">
+        <button
+          type="button"
+          onClick={onSuccess}
+          className="flex-1 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 font-medium text-sm transition-all border border-gray-200"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex-1 h-11 rounded-xl bg-[#2d3436] hover:opacity-90 disabled:opacity-40 text-white font-medium text-sm transition-all flex items-center justify-center gap-1.5"
+        >
+          {isSubmitting ? (
+            "Processing..."
+          ) : (
+            <>
+              <Plus size={16} strokeWidth={1.8} />
+              Add deposit
+            </>
+          )}
+        </button>
+      </div>
+    </form>
   )
 }
