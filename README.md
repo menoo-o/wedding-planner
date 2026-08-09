@@ -16,4 +16,6 @@ app/dashboard/
 │
 ├── components/             # UI components
 │
-└── page.tsx                # Thin shell, just renders
+└── page.tsx                # Thin shell, just renders / main dashboard
+
+- EXPENSES PAGE -
