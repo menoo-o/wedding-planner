@@ -84,7 +84,7 @@ async function DashboardContent() {
   const isBurningFaster = velocityRatio > 1
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* ── Top Bar ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -92,9 +92,7 @@ async function DashboardContent() {
           <p className="text-sm text-gray-400 mt-0.5">Welcome back to your household ledger</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:shadow-sm transition-all">
-            <Search size={18} strokeWidth={1.5} />
-          </button>
+
           <button className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:shadow-sm transition-all relative">
             <Bell size={18} strokeWidth={1.5} />
             {obligationCount > 0 && (

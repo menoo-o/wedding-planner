@@ -1,7 +1,8 @@
 // app/dashboard/expenses/page.tsx
-
+import { Filter } from "lucide-react" 
 import { Suspense } from "react"
 import Link from "next/link"
+
 import {
   Wallet,
   TrendingDown,
@@ -315,7 +316,7 @@ async function ExpensesContent({
     : 30
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* ── Top Bar ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -416,40 +417,48 @@ async function ExpensesContent({
           </p>
           <p className="text-xs text-gray-400 mt-2">per day this cycle</p>
         </div>
+
       </div>
 
-      {/* ── Filter Bar (Client Component with URL sync) ──────── */}
-      <ExpensesFilterBar
-        cycles={cycles}
-        categories={categories}
-        currentCycleId={currentCycleId}
-        activeCategory={activeCategory}
-        activePayment={activePayment || "all"}
-        activeSort={sortOption}
-        searchQuery={searchQuery || ""}
-      />
+     
 
-      {/* ── Category Tabs ─────────────────────────────────────── */}
-      <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl mt-6 mb-6 w-fit">
-        {categoryTabs.map((tab) => {
-          const isActive = activeCategory === tab.id
-          return (
-            <Link
-              key={tab.id}
-              href={`/dashboard/expenses?${buildQueryString({ ...params, category: tab.id === "all" ? undefined : tab.id })}`}
-              scroll={false}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                isActive
-                  ? "bg-white text-[#2d3436] shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {tab.name}
-            </Link>
-          )
-        })}
+      {/* ── Main Controls Bar ──────────────────────────────────────── */}
+      <div className="relative mt-6 mb-6">
+        
+        {/* Row 1: Category Tabs (leave space on right for toggle) */}
+        <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-fit pr-14">
+          {categoryTabs.map((tab) => {
+            const isActive = activeCategory === tab.id
+            return (
+              <Link
+                key={tab.id}
+                href={`/dashboard/expenses?${buildQueryString({ ...params, category: tab.id === "all" ? undefined : tab.id })}`}
+                scroll={false}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-white text-[#2d3436] shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab.name}
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* Full-width filter bar — toggle absolutely positioned, panel below */}
+        <ExpensesFilterBar
+          cycles={cycles}
+          categories={categories}
+          currentCycleId={currentCycleId}
+          activeCategory={activeCategory}
+          activePayment={activePayment || "all"}
+          activeSort={sortOption}
+          searchQuery={searchQuery || ""}
+        />
+
       </div>
-
+  
       {/* ── Expense List Grouped by Day ──────────────────────── */}
       <div className="space-y-6">
         {groupedExpenses.map((day) => (
@@ -553,7 +562,6 @@ async function ExpensesContent({
     </div>
   )
 }
-
 // ── Query String Builder ────────────────────────────────────
 
 function buildQueryString(params: Record<string, string | undefined>): string {

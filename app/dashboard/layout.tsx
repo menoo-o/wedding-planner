@@ -51,13 +51,15 @@ async function handleLogout() {
 
 // ── Layout ────────────────────────────────────────────────────
 
+// ── Layout ────────────────────────────────────────────────────
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
 
   return (
     <div className="min-h-screen bg-[#f0f2f5] flex font-sans">
       {/* Sidebar */}
-      <aside className="w-64 bg-white flex flex-col fixed h-full border-r border-gray-100/50 z-40">
+      <aside className="w-56 bg-white flex flex-col fixed h-full border-r border-gray-100/50 z-40">
         {/* Logo */}
         
       <div className="p-5 pb-3">
@@ -102,7 +104,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 min-h-screen">
+      <main className="flex-1 ml-56 min-h-screen">
         {children}
       </main>
     </div>
