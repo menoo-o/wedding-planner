@@ -11,7 +11,7 @@
   "dependencies": {
     "@codemirror/lang-sql": "^6.10.0",
     "@gsap/react": "^2.1.2",
-    "@hookform/resolvers": "^5.4.0",
+    "@hookform/resolvers": "^5.9.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "@uiw/react-codemirror": "^4.25.11",

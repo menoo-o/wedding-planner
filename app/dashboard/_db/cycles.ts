@@ -26,3 +26,5 @@ export async function getCyclePair(householdId: string): Promise<{
   const previous = data.find((c) => c.is_closed) ?? null
   return { active, previousId: previous?.id ?? null }
 }
+
+

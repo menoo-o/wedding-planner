@@ -15,6 +15,9 @@ app/dashboard/
 │   └── dashboard.ts        # Assembles DashboardData
 │
 ├── components/             # UI components
+|     ├── liquidity-widget              # liquiditiy components
+|            ├── .../             # somefiles here!
+|
 │
 └── page.tsx                # Thin shell, just renders / main dashboard
 

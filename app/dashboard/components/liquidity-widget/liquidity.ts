@@ -66,7 +66,7 @@ export async function getLiveServerLiquidity(householdId: string) {
       }
     } 
     // Parse Bank Card interactions (safely tracking both legacy 'card' and clean 'card_meezan' tags)
-    else if (tx.payment_account === 'card_meezan' || tx.payment_account === 'card') {
+    else if (tx.payment_account === 'card') {
       if (isAddition) bankChange += val;
       if (isDeduction) bankChange -= val; // E.g. 'settlement' reduces the bank account here smoothly
       if (tx.transaction_type === 'transfer') {

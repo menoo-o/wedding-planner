@@ -21,6 +21,7 @@ interface Cycle {
   id: string
   created_at: string
   is_closed: boolean
+  
 }
 
 interface Category {
@@ -67,7 +68,7 @@ interface ExpensesFilterBarProps {
 export default function ExpensesFilterBar({
   cycles,
   categories,
-  mode = "full",
+  // mode = "full",
   currentCycleId,
   activeCategory,
   activePayment,
@@ -176,7 +177,7 @@ return (
           isOpen ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0 mt-0"
         }`}
       >
-        <div className="overflow-hidden min-h-0">
+       <div className={`${isOpen ? "overflow-visible" : "overflow-hidden"} min-h-0`}>
           <div className="rounded-2xl bg-white p-4 border border-gray-100/80 shadow-sm">
             {/* Row 1: Payment source tabs + cycle/category dropdowns */}
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">

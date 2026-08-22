@@ -1,6 +1,8 @@
 // app/dashboard/expenses/page.tsx
-import { Filter } from "lucide-react" 
+
 import { Suspense } from "react"
+import {createClient} from "@/utils/supabase/server"
+import { connection } from 'next/server'
 import Link from "next/link"
 
 import {
@@ -14,11 +16,14 @@ import {
 } from "lucide-react"
 
 import { getDashboardData } from '../_services/dashboard'
+import { getPrevCycleExpenses } from "../_db/transactions"
 import { getCycleTransactions, getTransactionsByType } from "../_db/transactions"
 import { getCyclePair } from "../_db/cycles"
 import { getHouseholdCategories } from "../_db/categories"
 import ActionBar from "../components/ui/ActionBar"
 import ExpensesFilterBar from "../components/ExpensesFilterBar"
+import {getLiveServerLiquidity} from "../components/liquidity-widget/liquidity"
+
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -180,32 +185,52 @@ async function ExpensesContent({
     householdMember,
     monthlyCycle,
     categories,
-    currentExpenses,
     previousExpenses,
     rawTransactions,
     payablesRecords,
     receivablesRecords,
-    cash,
-    card,
+    // cash,
+    // card,
   } = await getDashboardData()
 
   const householdId = householdMember?.household_id ?? ""
   const currentCycleId = monthlyCycle?.id ?? ""
   const createdBy = householdMember?.user_id ?? ""
 
+  await connection(); 
+  
+
+
+
+  //GET THE CASH & CARD BALANCE FROM THE LIVE SERVER
+    const [liveLiquidity] = await Promise.all([
+      getLiveServerLiquidity(householdId),
+    ])
+
+    const {cash, card}  = liveLiquidity || {cash: 0, card: 0}
+  
   // Fetch all household cycles for the cycle selector
-  const supabase = (await import("@/utils/supabase/server")).createClient
-  const { data: allCycles } = await (await supabase())
+  const supabase = await createClient()
+  const { data: allCycles } = await supabase
     .from("monthly_cycles")
-    .select("id, created_at, is_closed")
+    .select("id, created_at, is_closed, month, year, opening_balance")
     .eq("household_id", householdId)
     .order("created_at", { ascending: false })
+
+  const { data: monthlyCycleDays } = await supabase
+  .from("monthly_cycles_view")
+  .select("id, opening_cash_balance, opening_bank_balance, days_in_cycle")
+  .eq("household_id", householdId)
+  .eq("is_closed", false)
+  .maybeSingle();
 
   const cycles: MonthlyCycle[] = (allCycles || []).map((c: any) => ({
     id: c.id,
     household_id: householdId,
     created_at: c.created_at,
     is_closed: c.is_closed,
+    month: c.month,
+    year: c.year,
     opening_balance: c.opening_balance ?? 0,
   }))
 
@@ -307,13 +332,32 @@ async function ExpensesContent({
 
   // Stats (based on selected cycle)
   const selectedCycleExpenses = filtered.reduce((sum, tx) => sum + tx.amount, 0)
+  
   const obligationCount = receivablesRecords.length + payablesRecords.length
-  const velocityRatio = previousExpenses > 0 ? currentExpenses / previousExpenses : 0
+  // Velocity ratio: how fast are we burning cash vs last month?
+  // Find the cycle BEFORE the selected one (in the desc-sorted array)
+const selectedIndex = cycles.findIndex((c) => c.id === selectedCycleId)
+const previousCycleId = selectedIndex >= 0 && selectedIndex < cycles.length - 1
+  ? cycles[selectedIndex + 1]?.id ?? null  // next in array = chronologically earlier
+  : null
+
+// Fetch previous cycle's expenses for comparison
+let previousCycleExpenses = 0
+if (previousCycleId) {
+  const prevExpenses = await getPrevCycleExpenses(householdId, previousCycleId)
+  previousCycleExpenses = prevExpenses.reduce((sum, tx) => sum + tx.amount, 0)
+}
+
+// Compare selected cycle vs its previous
+const velocityRatio = previousCycleExpenses > 0 
+  ? selectedCycleExpenses / previousCycleExpenses 
+  : 0
+
   const isBurningFaster = velocityRatio > 1
   const totalLiquidity = cash + card
-  const daysInCycle = monthlyCycle
-    ? Math.max(1, Math.floor((Date.now() - new Date(monthlyCycle.created_at).getTime()) / (1000 * 60 * 60 * 24)))
-    : 30
+
+
+const daysInCycle = monthlyCycleDays?.days_in_cycle ?? 30;
 
   return (
     <div className="p-6 max-w-7xl mx-auto">

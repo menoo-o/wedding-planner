@@ -1,9 +1,10 @@
 // app/dashboard/components/Toast.tsx
 "use client"
 
-import React, { useEffect } from "react"
+import React from "react"
 
-export type ToastType = "success" | "error" | "info"
+// Update this line to include "warning"
+export type ToastType = "success" | "error" | "warning" | "info"
 
 export interface ToastData {
   id: string
@@ -18,49 +19,102 @@ interface ToastProps {
   duration?: number // ms, default 4000
 }
 
-const ICONS: Record<ToastType, string> = {
-  success: "✅",
-  error: "❌",
-  info: "ℹ️",
-}
-
 const STYLES: Record<ToastType, string> = {
-  success: "bg-emerald-50 border-emerald-200 text-emerald-800",
-  error: "bg-red-50 border-red-200 text-red-800",
-  info: "bg-blue-50 border-blue-200 text-blue-800",
+  success: "bg-white border-gray-100 text-[#00b894]",
+  error: "bg-white border-red-100 text-[#e17055]",
+  warning: "bg-white border-amber-100 text-[#fdcb6e]",
+  info: "bg-white border-[#8b9dc3]/20 text-[#8b9dc3]",
 }
 
-export default function Toast({ toast, onDismiss, duration = 4000 }: ToastProps) {
-  useEffect(() => {
-    if (!toast) return
-    const timer = setTimeout(onDismiss, duration)
-    return () => clearTimeout(timer)
-  }, [toast, onDismiss, duration])
+const ICON_BG: Record<ToastType, string> = {
+  success: "bg-[#e8f5e9] text-[#00b894]",
+  error: "bg-[#ffebee] text-[#e17055]",
+  warning: "bg-[#fff3e0] text-[#fdcb6e]",
+  info: "bg-[#e8eaf6] text-[#8b9dc3]",
+}
 
+const ICONS: Record<ToastType, string> = {
+  success: "✓",
+  error: "✕",
+  warning: "!",
+  info: "i",
+}
+
+export default function Toast({ toast, onDismiss }: ToastProps) {
+  // 1. Guard against null to prevent runtime crash
   if (!toast) return null
 
+  const duration =  3000
+
   return (
-    <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right fade-in duration-300">
-      <div className={`rounded-lg border shadow-lg p-4 min-w-[320px] max-w-[400px] ${STYLES[toast.type]}`}>
-        <div className="flex items-start gap-3">
-          <span className="text-lg leading-none mt-0.5">{ICONS[toast.type]}</span>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-sm">{toast.title}</p>
-            <p className="text-xs mt-1 opacity-90 leading-relaxed">{toast.message}</p>
+    <>
+      {/* 2. Keyframes definition injected for the shrink animation */}
+      <style>{`
+        @keyframes shrink {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
+
+      <div className="fixed top-5 right-5 z-[100] animate-in slide-in-from-right-4 fade-in duration-300 ease-out">
+        <div
+          className={`relative rounded-2xl border shadow-[0_8px_30px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] p-4 pr-10 min-w-[340px] max-w-[420px] backdrop-blur-sm ${STYLES[toast.type]}`}
+        >
+          {/* Progress bar */}
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black/5 rounded-b-2xl overflow-hidden">
+            <div
+              className="h-full bg-current opacity-40"
+              style={{
+                animation: `shrink ${duration}ms linear forwards`,
+              }}
+            />
           </div>
-          <button
-            onClick={onDismiss}
-            className="text-lg leading-none opacity-60 hover:opacity-100 transition-opacity"
-            aria-label="Dismiss"
-          >
-            ×
-          </button>
+
+          <div className="flex items-start gap-3.5">
+            {/* Icon circle */}
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 font-bold ${ICON_BG[toast.type]}`}
+            >
+              <span className="text-base leading-none">{ICONS[toast.type]}</span>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0 pt-0.5">
+              <p className="font-semibold text-[13px] text-[#2d3436] leading-tight">
+                {toast.title}
+              </p>
+              <p className="text-[13px] text-gray-500 mt-1 leading-relaxed">
+                {toast.message}
+              </p>
+            </div>
+
+            {/* Dismiss Button */}
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="absolute top-3 right-3 w-6 h-6 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+              aria-label="Dismiss"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
-
 // ── Hook for easy toast management ────────────────────────────
 
 export function useToast() {
@@ -72,5 +126,17 @@ export function useToast() {
 
   const dismiss = React.useCallback(() => setToast(null), [])
 
+  React.useEffect(() => {
+    if (!toast) return
+
+    const timer = setTimeout(() => {
+      setToast(null)
+    }, 3000) // 👈 Stays visible for 3 seconds on screen
+
+    return () => clearTimeout(timer)
+  }, [toast])
+
   return { toast, show, dismiss }
 }
+
+

@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const REDIRECT_DELAY_SECONDS = 6
+const REDIRECT_DELAY_SECONDS = 3
 
 export default function DashboardError({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter()

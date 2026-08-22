@@ -12,16 +12,18 @@ import {
   Clock,
   Shield,
   Sparkles,
-  Search,
   Bell,
 } from "lucide-react"
 
 import { getDashboardData } from './_services/dashboard'
 import { getLiveServerLiquidity } from "./components/liquidity-widget/liquidity"
+
 import { getVendors } from "@/app/dashboard/_services/vendors"
+
 
 import RecentExpenses from "./components/ExpensesDashBlock/Activity"
 import ActionBar from "./components/ui/ActionBar"
+
 // ── Skeleton ──────────────────────────────────────────────────
 
 function DashboardSkeleton() {
@@ -56,8 +58,7 @@ export default async function DashboardPage() {
 
 async function DashboardContent() {
   const {
-    householdMember, monthlyCycle, categories, receivables, payables,
-    userId, netDebt, currentExpenses, previousExpenses, runway,
+    householdMember, monthlyCycle, categories, receivables, payables, netDebt, currentExpenses, previousExpenses, runway,
     debtLoadRatio, rawTransactions, walletName, savingsBalance,
     receivablesRecords, payablesRecords,
   } = await getDashboardData()
@@ -66,13 +67,14 @@ async function DashboardContent() {
   const currentCycleId = monthlyCycle?.id ?? ""
   const createdBy = householdMember?.user_id ?? ""
 
-  const [liveLiquidity, vendors] = await Promise.all([
+  const [liveLiquidity] = await Promise.all([
     getLiveServerLiquidity(householdId),
     getVendors(householdId),
   ])
 
-  const { cash, card, total } = liveLiquidity
+  const { cash, card, total, monthlyExpenses } = liveLiquidity
 
+ 
   const rawExpenses = (rawTransactions || []).filter((tx) => tx.transaction_type === "expense")
   const expensesWithCategoryNames = rawExpenses.map((tx) => {
     const matchingCategory = categories.find((cat) => cat.id === tx.category_id)
@@ -145,7 +147,7 @@ async function DashboardContent() {
             <TrendingDown size={14} strokeWidth={1.5} />
             <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">This Month Spend</span>
           </div>
-          <p className="text-2xl font-bold text-[#e17055]">-Rs {currentExpenses.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-[#e17055]">-Rs {monthlyExpenses.toLocaleString()}</p>
           <p className="text-xs text-gray-400 mt-2">
             {previousExpenses > 0 ? (
               <span className={isBurningFaster ? "text-[#e17055]" : "text-[#00b894]"}>

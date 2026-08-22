@@ -6,6 +6,8 @@ import { ArrowDownRight, Plus, ArrowLeftRight } from "lucide-react"
 import AddExpenseModal from "../modals/AddExpenseModal"
 import TopUpForm from "../TopUpForm"
 import LoanForm from "../LoanForm"
+import Toast, { useToast } from "../Toast"
+import { useRouter } from "next/navigation"
 import Modal from "./Model"
 
 interface Category {
@@ -31,13 +33,20 @@ export default function ActionBar({
   initialCategories,
 }: ActionBarProps) {
   const [activeModal, setActiveModal] = useState<"expense" | "topup" | "loan" | null>(null)
+    const { toast, show: showToast, dismiss:dismissToast } = useToast()
+
 
   const openModal = (modal: "expense" | "topup" | "loan") => setActiveModal(modal)
   const closeModal = () => setActiveModal(null)
+  const router = useRouter()
+  const handleCategoryCreated = () => {
+  router.refresh()
+}
 
   return (
     <>
       <div className="flex gap-3 mb-8">
+        <Toast toast={toast} onDismiss={dismissToast} />
         <button
           onClick={() => openModal("expense")}
           className="flex items-center gap-2 px-5 py-3 bg-[#2d3436] hover:opacity-90 text-white rounded-xl text-sm font-medium transition-all shadow-sm"
@@ -63,18 +72,22 @@ export default function ActionBar({
         </button>
       </div>
 
-      {/* Expense Modal */}
-      <AddExpenseModal
-        isOpen={activeModal === "expense"}
-        onClose={closeModal}
-        categories={initialCategories}
-        householdId={householdId}
-        currentCycleId={currentCycleId}
-        createdBy={createdBy}
-        cashBalance={cashBalance}
-        cardBalance={cardBalance}
-        onCategoryCreated={closeModal}
-      />
+          {/* Expense Modal */}
+      {/* ✅ AFTER: Only mounts when activeModal is "expense" */}
+      {activeModal === "expense" && (
+        <AddExpenseModal
+          isOpen={true}
+          onClose={closeModal}
+          categories={initialCategories}
+          householdId={householdId}
+          currentCycleId={currentCycleId}
+          createdBy={createdBy}
+          cashBalance={cashBalance}
+          cardBalance={cardBalance}
+          showToast={showToast} // 👈 Pass trigger down
+          onCategoryCreated={handleCategoryCreated}
+        />
+      )}
 
       {/* Top Up Modal */}
       <Modal

@@ -67,11 +67,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   {/* Logo container — overflow visible allows image to pop out */}
   <div className="relative w-26 h-18 overflow-visible shrink-0 flex items-center justify-center">
     <Image
-      src="/logo-v1.png"
-      alt="Simply Finance"
-      fill
-      className="object-contain scale-150 origin-center transition-transform duration-300 group-hover:scale-160"
-      priority
+        src="/logo-v1.png"
+        alt="Simply Finance"
+        fill
+        sizes="(max-width: 768px) 120px, 160px"
+        className="object-contain scale-150 origin-center transition-transform duration-300 group-hover:scale-160"
+        priority
     />
   </div>
   <p className="text-[10px] text-gray-400 tracking-[0.15em] uppercase font-medium">
