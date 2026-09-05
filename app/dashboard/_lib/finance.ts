@@ -6,7 +6,6 @@ import {
   ReceivableRecord,
   LoanStatus 
 } from "@/lib/types";
-import { buildRepaymentsMap, calcRemaining } from "./ledger";
 
 // ── Interfaces ────────────────────────────────────────────────
 
@@ -68,18 +67,28 @@ export function computeBalances(
 export function computeLifetimeDebt(
   transactions: LifetimeDebtTransaction[]
 ): DebtResult {
-  const repaymentsMap = buildRepaymentsMap(transactions);
+  // 1. Inlined single-pass map for repayments
+  const repaymentsMap = new Map<string, number>();
+  for (const tx of transactions) {
+    if (
+      tx.related_transaction_id &&
+      (tx.transaction_type === "loan_return" || tx.transaction_type === "settlement")
+    ) {
+      const current = repaymentsMap.get(tx.related_transaction_id) || 0;
+      repaymentsMap.set(tx.related_transaction_id, current + Number(tx.amount));
+    }
+  }
 
   let receivables = 0;
   let payables = 0;
 
+  // 2. Compute outstanding active debts
   for (const tx of transactions) {
-    // Skip repayments and settled loans
     if (tx.transaction_type === "loan_return" || tx.transaction_type === "settlement") continue;
     if (tx.loan_status === "settled") continue;
 
     const repaid = repaymentsMap.get(tx.id) ?? 0;
-    const remaining = tx.amount - repaid;
+    const remaining = Math.max(0, Number(tx.amount) - repaid);
 
     if (remaining <= 0) continue;
 
@@ -115,53 +124,3 @@ export function computeDebtLoadRatio(
   return payables > 0 ? 100 : 0;
 }
 
-// ── deriveReceivablesLedger ───────────────────────────────────
-// DEPRECATED: Use getReceivablesLedger() from _db/transactions.ts instead
-// Kept for backward compat if any other code uses it, but marked deprecated
-
-/**
- * @deprecated Use getReceivablesLedger() from _db/transactions.ts for cross-cycle data
- */
-export function deriveReceivablesLedger(
-  currentTxs: CycleCalculationTransaction[]
-): { active: ReceivableRecord[]; settled: ReceivableRecord[] } {
-  const records = currentTxs.filter((tx) =>
-    tx.transaction_type === "loan_out" || tx.transaction_type === "loan_return"
-  );
-
-  const repaymentsMap = buildRepaymentsMap(records);
-  const active: ReceivableRecord[] = [];
-  const settled: ReceivableRecord[] = [];
-
-  for (const tx of records) {
-    if (tx.transaction_type !== "loan_out") continue;
-
-    const repaid = repaymentsMap.get(tx.id) ?? 0;
-    const remaining = calcRemaining(Number(tx.amount), repaid);
-
-    const record: ReceivableRecord = {
-      id: tx.id,
-      amount: Number(tx.amount),
-      remaining_amount: remaining,
-      loan_status: (tx.loan_status as LoanStatus) || "pending",
-      transaction_type: tx.transaction_type,
-      payment_account: tx.payment_account,
-      counterparty_name: tx.counterparty_name ?? null,
-      description: tx.description,
-      created_at: tx.created_at ?? "",
-      notes: tx.notes ?? null,
-      related_transaction_id: tx.related_transaction_id,
-    };
-
-    const isSettled = tx.loan_status === "settled" || remaining <= 0;
-    (isSettled ? settled : active).push(record);
-  }
-
-  const sortDesc = (a: ReceivableRecord, b: ReceivableRecord) =>
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-
-  return { 
-    active: active.sort(sortDesc), 
-    settled: settled.sort(sortDesc) 
-  };
-}

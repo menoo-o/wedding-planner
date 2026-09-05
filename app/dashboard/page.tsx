@@ -86,25 +86,15 @@ async function DashboardContent() {
   const isBurningFaster = velocityRatio > 1
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+   <div className="max-w-7xl mx-auto space-y-6">
       {/* ── Top Bar ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-[#2d3436]">Dashboard</h1>
           <p className="text-sm text-gray-400 mt-0.5">Welcome back to your household ledger</p>
         </div>
-        <div className="flex items-center gap-3">
 
-          <button className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:shadow-sm transition-all relative">
-            <Bell size={18} strokeWidth={1.5} />
-            {obligationCount > 0 && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#e17055] rounded-full" />
-            )}
-          </button>
-          <div className="w-10 h-10 rounded-xl bg-[#dfe6e9] flex items-center justify-center text-[#636e72] font-bold text-sm">
-            {householdMember?.role?.charAt(0).toUpperCase() || "U"}
-          </div>
-        </div>
+    
       </div>
 
       {/* ── Action Bar ───────────────────────────────────────── */}

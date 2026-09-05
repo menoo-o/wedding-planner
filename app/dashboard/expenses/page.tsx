@@ -1,9 +1,9 @@
 // app/dashboard/expenses/page.tsx
 
 import { Suspense } from "react"
-import {createClient} from "@/utils/supabase/server"
 import { connection } from 'next/server'
 import Link from "next/link"
+
 
 import {
   Wallet,
@@ -11,118 +11,26 @@ import {
   Scale,
   ChevronRight,
   Clock,
-  Search,
-  Bell,
 } from "lucide-react"
 
 import { getDashboardData } from '../_services/dashboard'
-import { getPrevCycleExpenses } from "../_db/transactions"
-import { getCycleTransactions, getTransactionsByType } from "../_db/transactions"
-import { getCyclePair } from "../_db/cycles"
-import { getHouseholdCategories } from "../_db/categories"
+import { getPrevCycleExpenses, getCycleTransactions } from "../_db/transactions"
+
+// import { getTransactionsByType } from "../_db/transactions" ->> reusable query helper that fetches a paginated, sorted list
+import { getAllCycles } from '../_db/cycles'  
+// import { getHouseholdCategories } from "../_db/categories"
 import ActionBar from "../components/ui/ActionBar"
 import ExpensesFilterBar from "../components/ExpensesFilterBar"
 import {getLiveServerLiquidity} from "../components/liquidity-widget/liquidity"
+import {getTopCategories} from '@/app/dashboard/_lib/utils'
+import { groupByDay } from '@/app/dashboard/_lib/utils'
+import { ExpenseTransaction } from "../_lib/utils"
+import { MonthlyCycle } from "@/lib/types"
 
 
-// ── Types ─────────────────────────────────────────────────────
 
-interface ExpenseTransaction {
-  id: string
-  amount: number
-  transaction_type: string
-  payment_account: string
-  description: string
-  category_id: string | null
-  category_name?: string
-  created_at: string
-  paid_by?: string | null
-  counterparty_name?: string | null
-  reimbursement_status?: string | null
-}
 
-interface DayGroup {
-  date: string
-  label: string
-  transactions: ExpenseTransaction[]
-  dayTotal: number
-}
-
-interface MonthlyCycle {
-  id: string
-  household_id: string
-  created_at: string
-  is_closed: boolean
-  opening_balance: number
-}
-
-// ── Helpers ───────────────────────────────────────────────────
-
-function formatDateLabel(dateStr: string): string {
-  const date = new Date(dateStr)
-  const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-
-  const isToday = date.toDateString() === today.toDateString()
-  const isYesterday = date.toDateString() === yesterday.toDateString()
-
-  if (isToday) return "Today"
-  if (isYesterday) return "Yesterday"
-
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
-}
-
-function groupByDay(transactions: ExpenseTransaction[]): DayGroup[] {
-  const groups = new Map<string, ExpenseTransaction[]>()
-
-  for (const tx of transactions) {
-    const dateKey = new Date(tx.created_at).toISOString().split("T")[0]
-    if (!groups.has(dateKey)) groups.set(dateKey, [])
-    groups.get(dateKey)!.push(tx)
-  }
-
-  const sortedKeys = Array.from(groups.keys()).sort((a, b) =>
-    new Date(b).getTime() - new Date(a).getTime()
-  )
-
-  return sortedKeys.map((key) => {
-    const txs = groups.get(key)!
-    const dayTotal = txs.reduce((sum, tx) => sum + tx.amount, 0)
-    return {
-      date: key,
-      label: formatDateLabel(key),
-      transactions: txs,
-      dayTotal,
-    }
-  })
-}
-
-// Get top 3 categories by spending
-function getTopCategories(
-  transactions: ExpenseTransaction[],
-  allCategories: { id: string; name: string }[]
-) {
-  const categoryTotals = new Map<string, number>()
-  transactions.forEach((tx) => {
-    const catId = tx.category_id || "uncategorized"
-    categoryTotals.set(catId, (categoryTotals.get(catId) || 0) + tx.amount)
-  })
-
-  const sorted = Array.from(categoryTotals.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-
-  return sorted.map(([catId, total]) => {
-    const cat = allCategories.find((c) => c.id === catId)
-    return { id: catId, name: cat?.name || "General", total }
-  })
-}
+// ── Helpers (exists in ../_lib/utils.ts) ───────────────────────────────────────────────────
 
 // ── Skeleton ──────────────────────────────────────────────────
 
@@ -207,24 +115,10 @@ async function ExpensesContent({
       getLiveServerLiquidity(householdId),
     ])
 
-    const {cash, card}  = liveLiquidity || {cash: 0, card: 0}
-  
-  // Fetch all household cycles for the cycle selector
-  const supabase = await createClient()
-  const { data: allCycles } = await supabase
-    .from("monthly_cycles")
-    .select("id, created_at, is_closed, month, year, opening_balance")
-    .eq("household_id", householdId)
-    .order("created_at", { ascending: false })
+  const {cash, card}  = liveLiquidity || {cash: 0, card: 0}
+  const allCycles = await getAllCycles(householdId)
 
-  const { data: monthlyCycleDays } = await supabase
-  .from("monthly_cycles_view")
-  .select("id, opening_cash_balance, opening_bank_balance, days_in_cycle")
-  .eq("household_id", householdId)
-  .eq("is_closed", false)
-  .maybeSingle();
-
-  const cycles: MonthlyCycle[] = (allCycles || []).map((c: any) => ({
+  const cycles: MonthlyCycle[] = ((allCycles as MonthlyCycle[]) || []).map((c) => ({
     id: c.id,
     household_id: householdId,
     created_at: c.created_at,
@@ -232,6 +126,9 @@ async function ExpensesContent({
     month: c.month,
     year: c.year,
     opening_balance: c.opening_balance ?? 0,
+    opening_cash_balance: c.opening_cash_balance ?? 0,
+    opening_bank_balance: c.opening_bank_balance ?? 0,
+    days_in_cycle: c.days_in_cycle ?? 30,
   }))
 
   // Determine which cycle to show
@@ -272,7 +169,7 @@ async function ExpensesContent({
   const categoryTabs = [
     { id: "all", name: "All expenses" },
     ...topCategories.map((c) => ({ id: c.id, name: c.name })),
-    { id: "reimbursements", name: "Reimbursements" },
+    // { id: "reimbursements", name: "Reimbursements" },
   ]
 
   // ── Apply ALL filters from searchParams ───────────────────
@@ -333,34 +230,33 @@ async function ExpensesContent({
   // Stats (based on selected cycle)
   const selectedCycleExpenses = filtered.reduce((sum, tx) => sum + tx.amount, 0)
   
-  const obligationCount = receivablesRecords.length + payablesRecords.length
   // Velocity ratio: how fast are we burning cash vs last month?
   // Find the cycle BEFORE the selected one (in the desc-sorted array)
-const selectedIndex = cycles.findIndex((c) => c.id === selectedCycleId)
-const previousCycleId = selectedIndex >= 0 && selectedIndex < cycles.length - 1
-  ? cycles[selectedIndex + 1]?.id ?? null  // next in array = chronologically earlier
-  : null
+  const selectedIndex = cycles.findIndex((c) => c.id === selectedCycleId)
+  const previousCycleId = selectedIndex >= 0 && selectedIndex < cycles.length - 1
+    ? cycles[selectedIndex + 1]?.id ?? null  // next in array = chronologically earlier
+    : null
 
-// Fetch previous cycle's expenses for comparison
-let previousCycleExpenses = 0
-if (previousCycleId) {
-  const prevExpenses = await getPrevCycleExpenses(householdId, previousCycleId)
-  previousCycleExpenses = prevExpenses.reduce((sum, tx) => sum + tx.amount, 0)
-}
+  // Fetch previous cycle's expenses for comparison
+  let previousCycleExpenses = 0
+  if (previousCycleId) {
+    const prevExpenses = await getPrevCycleExpenses(householdId, previousCycleId)
+    previousCycleExpenses = prevExpenses.reduce((sum, tx) => sum + tx.amount, 0)
+  }
 
-// Compare selected cycle vs its previous
-const velocityRatio = previousCycleExpenses > 0 
-  ? selectedCycleExpenses / previousCycleExpenses 
-  : 0
+  // Compare selected cycle vs its previous
+  const velocityRatio = previousCycleExpenses > 0 
+    ? selectedCycleExpenses / previousCycleExpenses 
+    : 0
 
-  const isBurningFaster = velocityRatio > 1
-  const totalLiquidity = cash + card
+    const isBurningFaster = velocityRatio > 1
+    const totalLiquidity = cash + card
 
 
-const daysInCycle = monthlyCycleDays?.days_in_cycle ?? 30;
-
+  const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
+//parent / main expenses page
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* ── Top Bar ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -374,20 +270,7 @@ const daysInCycle = monthlyCycleDays?.days_in_cycle ?? 30;
               : "No active cycle"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:shadow-sm transition-all">
-            <Search size={18} strokeWidth={1.5} />
-          </button>
-          <button className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:shadow-sm transition-all relative">
-            <Bell size={18} strokeWidth={1.5} />
-            {obligationCount > 0 && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#e17055] rounded-full" />
-            )}
-          </button>
-          <div className="w-10 h-10 rounded-xl bg-[#dfe6e9] flex items-center justify-center text-[#636e72] font-bold text-sm">
-            {householdMember?.role?.charAt(0).toUpperCase() || "U"}
-          </div>
-        </div>
+       
       </div>
 
       {/* ── Action Bar ───────────────────────────────────────── */}

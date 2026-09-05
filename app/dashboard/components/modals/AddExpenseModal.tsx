@@ -19,8 +19,7 @@ import {
 } from "lucide-react"
 
 import { expenseSchema, ExpenseFormData } from "@/app/dashboard/_lib/addExpenseSchema"
-// import Toast, { useToast } from "../Toast" - MAKING CHANGES
-// app/dashboard/components/modals/AddExpenseModal.tsx
+
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -123,7 +122,7 @@ async function onSubmit(data: ExpenseFormData) {
           reimbursement_status: isSomeoneElse ? "pending" : null,
           loan_status: null,
           vendor_id: null,
-          parent_settlement_id: null,
+          // parent_settlement_id: null,
         }
 
         const { error } = await supabase.from("transactions").insert([payload])

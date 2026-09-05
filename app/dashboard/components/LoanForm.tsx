@@ -1,23 +1,17 @@
 // app/dashboard/components/LoanForm.tsx
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
 import { ArrowDownLeft, ArrowUpRight, Wallet, CreditCard, AlertCircle, FileText } from "lucide-react"
-
-type LoanFormData = {
-  household_id: string
-  cycle_id: string
-  created_by: string
-  loan_type: "loan_in" | "loan_out"
-  amount: number
-  payment_account: "cash" | "card"
-  counterparty_name: string
-  description: string
-  transaction_date: string
-}
+import {
+  LoanFormSchema,
+  LoanFormData,
+  LoanTransactionInsertSchema,
+} from "@/app/dashboard/_lib/loanFormSchema"
 
 function getTodayString() {
   const today = new Date()
@@ -31,6 +25,7 @@ interface LoanFormProps {
   cashBalance: number
   cardBalance: number
   onSuccess?: () => void
+  showToast: (type: "success" | "error" | "info", title: string, message: string) => void
 }
 
 export default function LoanForm({
@@ -39,11 +34,15 @@ export default function LoanForm({
   createdBy,
   cashBalance,
   cardBalance,
+  showToast,
   onSuccess,
 }: LoanFormProps) {
   const supabase = createClient()
   const router = useRouter()
   const [dbError, setDbError] = useState<string | null>(null)
+  // Guards against double-submit from a fast double-click landing before
+  // isSubmitting re-renders the disabled button.
+  const submittingRef = useRef(false)
 
   const {
     register,
@@ -53,13 +52,14 @@ export default function LoanForm({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoanFormData>({
+    resolver: zodResolver(LoanFormSchema),
     mode: "onChange",
     defaultValues: {
       household_id: householdId,
       cycle_id: currentCycleId,
       created_by: createdBy,
       loan_type: "loan_in",
-      amount: undefined,
+      amount: undefined as unknown as number,
       payment_account: "cash",
       counterparty_name: "",
       description: "",
@@ -81,60 +81,125 @@ export default function LoanForm({
   const executionLimit = selectedAccount === "cash" ? cashBalance : cardBalance
 
   async function onSubmit(data: LoanFormData) {
-    setDbError(null)
+    if (submittingRef.current) return
+    submittingRef.current = true
 
-    if (!data.cycle_id || !data.household_id) {
-      setDbError("System error: Missing ledger identifiers.")
-      return
-    }
+    try {
+      // 1. Session / Ledger Guard
+      if (!householdId || !currentCycleId || !createdBy) {
+        showToast("error", "Configuration Error", "Missing active ledger. Please refresh.")
+        return
+      }
+      setDbError(null)
 
-    const chosenDate = new Date(data.transaction_date)
-    const now = new Date()
+      // 2. Liquidity check for lending out
+      // NOTE: reads cashBalance/cardBalance passed down as props — advisory
+      // client-side check only, not a guard against two submissions racing
+      // on the same stale balance. Closing that gap needs a DB-level check.
+      if (data.loan_type === "loan_out" && data.amount > executionLimit) {
+        showToast(
+          "error",
+          "Insufficient Balance",
+          `You only have Rs ${executionLimit.toLocaleString()} in your ${data.payment_account.toUpperCase()} account.`
+        )
+        return
+      }
 
-    if (data.transaction_date === getTodayString()) {
-      chosenDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds())
-    } else {
-      chosenDate.setHours(12, 0, 0)
-    }
+      // 3. Form schema validation check
+      const parsed = LoanFormSchema.safeParse(data)
+      if (!parsed.success) {
+        console.error("Validation failed:", parsed.error.issues)
+        showToast("error", "Validation Failed", "Please check your input and try again.")
+        return
+      }
 
-    const cleanPayload = {
-      household_id: data.household_id,
-      cycle_id: data.cycle_id,
-      created_by: data.created_by,
-      transaction_type: data.loan_type,
-      payment_account: data.payment_account,
-      amount: data.amount,
-      counterparty_name: data.counterparty_name.trim(),
-      description:
+      // 4. Build timestamp — stay in local time throughout instead of mixing
+      // UTC-midnight parsing (new Date("YYYY-MM-DD")) with local setHours(),
+      // which could silently shift the stored date by a day near midnight
+      // depending on the user's UTC offset.
+      const [year, month, day] = data.transaction_date.split("-").map(Number)
+      const now = new Date()
+      const chosenDate =
+        data.transaction_date === getTodayString()
+          ? new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds())
+          : new Date(year, month - 1, day, 12, 0, 0)
+
+      // 5. Build DB Insert payload
+      const formattedDescription =
         data.description.trim() ||
-        `${data.loan_type === "loan_in" ? "Borrowed from" : "Lent to"} ${data.counterparty_name}`,
-      paid_by: null,
-      created_at: chosenDate.toISOString(),
-      category_id: null,
-      notes: null,
+        `${data.loan_type === "loan_in" ? "Borrowed from" : "Lent to"} ${data.counterparty_name.trim()}`
+
+      const isLendingOut = data.loan_type === "loan_out"
+
+      const payload = {
+        household_id: data.household_id,
+        cycle_id: data.cycle_id,
+        created_by: data.created_by,
+        transaction_type: data.loan_type,
+        amount: data.amount,
+        payment_account: data.payment_account,
+        counterparty_name: data.counterparty_name.trim(),
+        description: formattedDescription,
+        paid_by: isLendingOut ? "household" : "someone_else",
+        loan_status: "pending" as const, // parent debt row starts pending; status is
+                                          // recomputed from repayments at read time,
+                                          // never written to again after this insert.
+        related_transaction_id: null,    // root/parent row
+        category_id: null,
+        notes: null,
+        created_at: chosenDate.toISOString(),
+      }
+
+      const txParsed = LoanTransactionInsertSchema.safeParse(payload)
+      if (!txParsed.success) {
+        console.error("Payload validation failed:", txParsed.error.issues)
+        showToast("error", "Payload Invalid", "Failed to construct valid transaction records.")
+        return
+      }
+
+      // 6. DB Write
+      const { error } = await supabase.from("transactions").insert(txParsed.data)
+
+      if (error) {
+        setDbError(error.message)
+        showToast("error", "Failed to Record", error.message)
+        return
+      }
+
+      // 7. Success Toast notification
+      const isBorrowing = data.loan_type === "loan_in"
+      showToast(
+        "success",
+        isBorrowing ? "Loan Received" : "Loan Lent Out",
+        isBorrowing
+          ? `Rs ${data.amount.toLocaleString()} received from ${data.counterparty_name.trim()}`
+          : `Rs ${data.amount.toLocaleString()} lent to ${data.counterparty_name.trim()}`
+      )
+
+      // 8. Form reset and transition
+      reset({
+        household_id: householdId,
+        cycle_id: currentCycleId,
+        created_by: createdBy,
+        loan_type: "loan_in",
+        amount: undefined as unknown as number,
+        payment_account: "cash",
+        counterparty_name: "",
+        description: "",
+        transaction_date: getTodayString(),
+      })
+
+      onSuccess?.()
+      router.refresh()
+    } catch (err) {
+      // Catches thrown errors (network failure, timeout, offline) that
+      // Supabase's { error } return value wouldn't surface.
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again."
+      setDbError(message)
+      showToast("error", "Failed to Record", message)
+    } finally {
+      submittingRef.current = false
     }
-
-    const { error } = await supabase.from("transactions").insert(cleanPayload)
-
-    if (error) {
-      setDbError(error.message)
-      return
-    }
-
-    reset({
-      household_id: householdId,
-      cycle_id: currentCycleId,
-      created_by: createdBy,
-      loan_type: "loan_in",
-      amount: undefined,
-      payment_account: "cash",
-      counterparty_name: "",
-      description: "",
-      transaction_date: getTodayString(),
-    })
-
-    onSuccess?.()
-    router.refresh()
   }
 
   return (
@@ -154,9 +219,11 @@ export default function LoanForm({
       {/* Loan Type Toggle */}
       <div>
         <label className="block text-xs font-medium text-gray-500 mb-1.5">Transaction type</label>
-        <div className="flex gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
+        <div className="flex gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200" role="radiogroup" aria-label="Transaction type">
           <button
             type="button"
+            role="radio"
+            aria-checked={selectedLoanType === "loan_in"}
             onClick={() => setValue("loan_type", "loan_in")}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[13px] font-medium transition-all ${
               selectedLoanType === "loan_in"
@@ -169,6 +236,8 @@ export default function LoanForm({
           </button>
           <button
             type="button"
+            role="radio"
+            aria-checked={selectedLoanType === "loan_out"}
             onClick={() => setValue("loan_type", "loan_out")}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[13px] font-medium transition-all ${
               selectedLoanType === "loan_out"
@@ -180,6 +249,9 @@ export default function LoanForm({
             Lent (out)
           </button>
         </div>
+        {errors.loan_type && (
+          <p className="text-red-500 text-xs mt-1.5">{errors.loan_type.message}</p>
+        )}
       </div>
 
       {/* Date */}
@@ -187,7 +259,7 @@ export default function LoanForm({
         <label className="block text-xs font-medium text-gray-500 mb-1.5">Date</label>
         <input
           type="date"
-          {...register("transaction_date", { required: "Date is required" })}
+          {...register("transaction_date")}
           suppressHydrationWarning
           className={`w-full h-11 px-3.5 border rounded-xl text-[15px] outline-none transition-all ${
             errors.transaction_date
@@ -208,7 +280,7 @@ export default function LoanForm({
         <input
           type="text"
           placeholder="e.g. Ali Ahmed, Zain, Bank ABC"
-          {...register("counterparty_name", { required: "Name is required" })}
+          {...register("counterparty_name")}
           className={`w-full h-11 px-3.5 border rounded-xl text-[15px] outline-none transition-all ${
             errors.counterparty_name
               ? "border-red-400 focus:border-red-400 focus:ring-red-100"
@@ -238,17 +310,7 @@ export default function LoanForm({
             type="number"
             step="0.01"
             placeholder="0.00"
-            {...register("amount", {
-              required: "Amount is required",
-              valueAsNumber: true,
-              validate: {
-                positive: (v) => v > 0 || "Must be greater than zero",
-                overdraft: (v) =>
-                  selectedLoanType !== "loan_out" ||
-                  v <= executionLimit ||
-                  `Insufficient funds. Only Rs ${executionLimit.toLocaleString()} available in ${selectedAccount}.`,
-              },
-            })}
+            {...register("amount", { valueAsNumber: true })}
             className={`w-full h-[52px] pl-11 pr-3.5 border rounded-xl text-[22px] font-medium tabular-nums outline-none transition-all ${
               errors.amount
                 ? "border-red-400 focus:border-red-400 focus:ring-red-100"
@@ -266,9 +328,11 @@ export default function LoanForm({
         <label className="block text-xs font-medium text-gray-500 mb-1.5">
           {selectedLoanType === "loan_in" ? "Deposit to" : "Withdraw from"}
         </label>
-        <div className="flex gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
+        <div className="flex gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200" role="radiogroup" aria-label="Payment account">
           <button
             type="button"
+            role="radio"
+            aria-checked={selectedAccount === "cash"}
             onClick={() => setValue("payment_account", "cash")}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[13px] font-medium transition-all ${
               selectedAccount === "cash"
@@ -281,6 +345,8 @@ export default function LoanForm({
           </button>
           <button
             type="button"
+            role="radio"
+            aria-checked={selectedAccount === "card"}
             onClick={() => setValue("payment_account", "card")}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[13px] font-medium transition-all ${
               selectedAccount === "card"
@@ -292,6 +358,9 @@ export default function LoanForm({
             Card
           </button>
         </div>
+        {errors.payment_account && (
+          <p className="text-red-500 text-xs mt-1.5">{errors.payment_account.message}</p>
+        )}
       </div>
 
       {/* Description */}

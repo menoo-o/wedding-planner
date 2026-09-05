@@ -3,19 +3,11 @@
 
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
 import { Wallet, CreditCard, Info, Plus } from "lucide-react"
-
-type TopUpFormData = {
-  household_id: string
-  cycle_id: string
-  created_by: string
-  amount: number
-  description: string
-  transaction_date: string
-  payment_account: "cash" | "card"
-}
+import { TopUpFormSchema, TopUpFormData, TransactionInsertSchema } from "@/app/dashboard/_lib/topUpFormSchema"
 
 function getTodayString() {
   const today = new Date()
@@ -27,6 +19,7 @@ interface TopUpFormProps {
   currentCycleId: string
   createdBy: string
   onSuccess?: () => void
+ showToast: (type: "success" | "error" | "info", title: string, message: string) => void
 }
 
 export default function TopUpForm({
@@ -34,6 +27,7 @@ export default function TopUpForm({
   currentCycleId,
   createdBy,
   onSuccess,
+  showToast,
 }: TopUpFormProps) {
   const supabase = createClient()
   const router = useRouter()
@@ -46,11 +40,12 @@ export default function TopUpForm({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<TopUpFormData>({
+    resolver: zodResolver(TopUpFormSchema),
     defaultValues: {
       household_id: householdId,
       cycle_id: currentCycleId,
       created_by: createdBy,
-      amount: undefined,
+      amount: undefined as unknown as number,
       description: "",
       transaction_date: getTodayString(),
       payment_account: "cash",
@@ -67,25 +62,29 @@ export default function TopUpForm({
   }, [householdId, currentCycleId, createdBy, reset])
 
   async function onSubmit(data: TopUpFormData) {
-    if (!data.cycle_id || !data.household_id) {
-      console.error("Missing active ledger identifiers.")
+    // 1. Validate payload with schema
+    const parsed = TopUpFormSchema.safeParse(data)
+    if (!parsed.success) {
+      console.error("Validation failed:", parsed.error.issues)
+      showToast("error", "Validation Failed", "Please check your input and try again.")
       return
     }
 
+    // 2. Build timestamp
     const chosenDate = new Date(data.transaction_date)
     const now = new Date()
-
     if (data.transaction_date === getTodayString()) {
       chosenDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds())
     } else {
       chosenDate.setHours(12, 0, 0)
     }
 
-    const cleanPayload = {
+    // 3. Build database payload
+    const payload = {
       household_id: data.household_id,
       cycle_id: data.cycle_id,
       created_by: data.created_by,
-      transaction_type: "top_up",
+      transaction_type: "top_up" as const,
       amount: data.amount,
       description: data.description.trim(),
       created_at: chosenDate.toISOString(),
@@ -96,23 +95,40 @@ export default function TopUpForm({
       notes: null,
     }
 
-    const { error } = await supabase.from("transactions").insert(cleanPayload)
+    const txParsed = TransactionInsertSchema.safeParse(payload)
+    if (!txParsed.success) {
+      console.error("Payload validation failed:", txParsed.error.issues)
+      showToast("error", "Payload Validation Failed", "Please check your input and try again.")
+      return
+    }
+
+    // 4. Insert into Supabase
+    const { error } = await supabase.from("transactions").insert(txParsed.data)
 
     if (error) {
       console.error("Supabase Write Error:", error.message)
+      showToast("error", "Failed to Record", error.message)
       return
     }
+
+    // ✅ 5. Trigger success toast
+    showToast(
+      "success",
+      "Top-Up Added",
+      `Rs ${Number(data.amount).toLocaleString()} added to ${data.payment_account.toUpperCase()}`
+    )
 
     reset({
       household_id: householdId,
       cycle_id: currentCycleId,
       created_by: createdBy,
-      amount: undefined,
+      amount: undefined as unknown as number,
       description: "",
       transaction_date: getTodayString(),
       payment_account: "cash",
     })
 
+    // 6. Close modal and revalidate server data
     onSuccess?.()
     router.refresh()
   }
@@ -120,7 +136,7 @@ export default function TopUpForm({
   const selectedAccount = watch("payment_account")
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <input type="hidden" {...register("household_id")} />
       <input type="hidden" {...register("cycle_id")} />
       <input type="hidden" {...register("created_by")} />
@@ -130,10 +146,13 @@ export default function TopUpForm({
         <label className="block text-xs font-medium text-gray-500 mb-1.5">Date</label>
         <input
           type="date"
-          {...register("transaction_date", { required: "Date is required" })}
+          {...register("transaction_date")}
           suppressHydrationWarning
           className="w-full h-11 px-3.5 border border-gray-200 rounded-xl text-[15px] text-[#2d3436] outline-none focus:border-[#2d3436] focus:ring-[3px] focus:ring-black/[0.04] transition-all"
         />
+        {errors.transaction_date && (
+          <p className="text-red-500 text-xs mt-1.5">{errors.transaction_date.message}</p>
+        )}
       </div>
 
       {/* Amount */}
@@ -148,11 +167,7 @@ export default function TopUpForm({
             step="0.01"
             placeholder="0.00"
             autoFocus
-            {...register("amount", {
-              required: "Amount is required",
-              valueAsNumber: true,
-              validate: (val) => val > 0 || "Deposit must be greater than 0",
-            })}
+            {...register("amount", { valueAsNumber: true })}
             className={`w-full h-[52px] pl-11 pr-3.5 border rounded-xl text-[22px] font-medium tabular-nums outline-none transition-all ${
               errors.amount
                 ? "border-red-400 focus:border-red-400 focus:ring-red-100"
@@ -201,6 +216,9 @@ export default function TopUpForm({
             Bank card
           </button>
         </div>
+        {errors.payment_account && (
+          <p className="text-red-500 text-xs mt-1.5">{errors.payment_account.message}</p>
+        )}
       </div>
 
       {/* Description */}
@@ -211,9 +229,7 @@ export default function TopUpForm({
         <input
           type="text"
           placeholder="e.g. Monthly salary, cash injection..."
-          {...register("description", {
-            required: "Please describe the source of this funding",
-          })}
+          {...register("description")}
           className={`w-full h-11 px-3.5 border rounded-xl text-[15px] outline-none transition-all ${
             errors.description
               ? "border-red-400 focus:border-red-400 focus:ring-red-100"

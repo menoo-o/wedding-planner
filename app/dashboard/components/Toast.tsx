@@ -44,7 +44,7 @@ export default function Toast({ toast, onDismiss }: ToastProps) {
   // 1. Guard against null to prevent runtime crash
   if (!toast) return null
 
-  const duration =  3000
+  const duration =  3500
 
   return (
     <>

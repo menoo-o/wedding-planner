@@ -5,6 +5,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
+import RefreshButton from "@/app/dashboard/components/refreshStats"
+
 import { ReactNode } from "react"
 import {
   LayoutDashboard,
@@ -14,6 +16,7 @@ import {
   BarChart3,
   Store,
   Settings,
+  Bell,
   LogOut,
 } from "lucide-react"
 
@@ -50,36 +53,33 @@ async function handleLogout() {
 }
 
 // ── Layout ────────────────────────────────────────────────────
-
-// ── Layout ────────────────────────────────────────────────────
-
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+
 
   return (
     <div className="min-h-screen bg-[#f0f2f5] flex font-sans">
       {/* Sidebar */}
       <aside className="w-56 bg-white flex flex-col fixed h-full border-r border-gray-100/50 z-40">
         {/* Logo */}
-        
-      <div className="p-5 pb-3">
-       <Link href="/dashboard" className="flex items-center gap-3 group">
-  {/* Logo container — overflow visible allows image to pop out */}
-  <div className="relative w-26 h-18 overflow-visible shrink-0 flex items-center justify-center">
-    <Image
-        src="/logo-v1.png"
-        alt="Simply Finance"
-        fill
-        sizes="(max-width: 768px) 120px, 160px"
-        className="object-contain scale-150 origin-center transition-transform duration-300 group-hover:scale-160"
-        priority
-    />
-  </div>
-  <p className="text-[10px] text-gray-400 tracking-[0.15em] uppercase font-medium">
-    Simply Finance
-  </p>
-</Link>
-      </div>
+        <div className="p-5 pb-3">
+          <Link href="/dashboard" className="flex items-center gap-3 group">
+            <div className="relative w-26 h-18 overflow-visible shrink-0 flex items-center justify-center">
+              <Image
+                src="/logo-v1.png"
+                alt="Simply Finance"
+                fill
+                sizes="(max-width: 768px) 120px, 160px"
+                className="object-contain scale-150 origin-center transition-transform duration-300 group-hover:scale-160"
+                priority
+              />
+            </div>
+            <p className="text-[10px] text-gray-400 tracking-[0.15em] uppercase font-medium">
+              Simply Finance
+            </p>
+          </Link>
+        </div>
+
         {/* Main Nav */}
         <nav className="flex-1 px-3 py-2 space-y-0.5">
           {SIDEBAR_NAV.map((item) => (
@@ -92,23 +92,50 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           {BOTTOM_NAV.map((item) => (
             <NavLink key={item.href} {...item} pathname={pathname} />
           ))}
-          
-          {/* Logout — moved from root layout */}
+
+          {/* Logout */}
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all duration-200 group mt-2"
           >
-            <LogOut size={18} strokeWidth={1.5} className="group-hover:scale-110 transition-transform" />
+            <LogOut
+              size={18}
+              strokeWidth={1.5}
+              className="group-hover:scale-110 transition-transform"
+            />
             Sign Out
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 ml-56 min-h-screen">
-        {children}
-      </main>
-    </div>
+      {/* Main Content Area */}
+      <div className="flex-1 ml-56 min-h-screen relative">
+        {/* Floating Top-Right Action Controls (Does NOT push content down) */}
+        <div className="fixed top-6 right-8 z-50 flex items-center gap-3">
+          {/* Refresh Button */}
+          <RefreshButton />
+
+          {/* Notifications Button */}
+          <button 
+            type="button"
+            className="w-10 h-10 rounded-xl bg-white/90 backdrop-blur-md border border-gray-200/70 shadow-sm flex items-center justify-center text-gray-400 hover:text-gray-600 hover:shadow transition-all relative"
+          >
+            <Bell size={18} strokeWidth={1.5} />
+          </button>
+
+          {/* Profile Avatar */}
+          <div className="w-10 h-10 rounded-xl bg-[#dfe6e9] border border-gray-200/50 shadow-sm flex items-center justify-center text-[#636e72] font-bold text-sm">
+            {/* householdMember?.role?.charAt(0).toUpperCase() || "U" */}
+            U
+          </div>
+        </div>
+
+        {/* Page Content takes 100% of the screen naturally */}
+        <main className="p-8">
+          {children}
+        </main>
+      </div>
+    </div>  
   )
 }
 

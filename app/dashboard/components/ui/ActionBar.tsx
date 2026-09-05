@@ -33,7 +33,7 @@ export default function ActionBar({
   initialCategories,
 }: ActionBarProps) {
   const [activeModal, setActiveModal] = useState<"expense" | "topup" | "loan" | null>(null)
-    const { toast, show: showToast, dismiss:dismissToast } = useToast()
+  const { toast, show: showToast, dismiss: dismissToast } = useToast()
 
 
   const openModal = (modal: "expense" | "topup" | "loan") => setActiveModal(modal)
@@ -101,6 +101,7 @@ export default function ActionBar({
           currentCycleId={currentCycleId}
           createdBy={createdBy}
           onSuccess={closeModal}
+          showToast={showToast}
         />
       </Modal>
 
@@ -118,6 +119,7 @@ export default function ActionBar({
           cashBalance={cashBalance}
           cardBalance={cardBalance}
           onSuccess={closeModal}
+          showToast={showToast}
         />
       </Modal>
     </>

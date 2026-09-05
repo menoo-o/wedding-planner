@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { Category } from '@/lib/types'
+import { ExpenseTransaction } from '../_lib/utils'
 
 export async function getHouseholdCategories(householdId: string): Promise<Category[]> {
   const supabase = await createClient()

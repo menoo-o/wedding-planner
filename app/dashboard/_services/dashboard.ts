@@ -3,18 +3,20 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 
-import { getCyclePair } from '../_db/cycles';
+import { getCyclePair, getCycleTransactionArgs } from '../_db/cycles';
+
 import { 
   getCycleTransactions, 
   getPrevCycleExpenses, 
-  getActivePayables,
-  getReceivablesLedger  // ← FIXED: Import from DB, not finance
+  getActiveDebtLedger,
+  getSettledDebtHistory // include only if you render the settled tab
 } from '../_db/transactions';
-import { getLifetimeDebtTransactions } from '../_db/debt';
+
+// import { getLifetimeDebtTransactions } from '../_db/debt';
 import { getHouseholdCategories } from '../_db/categories';
 import { 
   computeBalances, 
-  computeLifetimeDebt, 
+  // computeLifetimeDebt, 
   computeRunway, 
   computeDebtLoadRatio 
 } from '../_lib/finance';
@@ -54,52 +56,51 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
-  const supabase = await createClient();
+  const supabase = await createClient()
 
   // Stage 1 — Auth
   const { data, error } = await withTimeout(
     supabase.auth.getClaims(),
     4000,
     "auth.getClaims"
-  );
+  )
 
   if (error || !data?.claims?.sub) {
-    console.error("Auth error:", error);
-    redirect("/login");
+    console.error("Auth error:", error)
+    redirect("/login")
   }
-  const userId = data.claims.sub;
+  const userId = data.claims.sub
 
   // Stage 2 — Household lookup
   const householdMember = await withTimeout(
     getHouseholdMember(userId),
     4000,
     "getHouseholdMember"
-  );
-  if (!householdMember) return EMPTY_DASHBOARD;
-  const { household_id } = householdMember;
+  )
+  if (!householdMember) return EMPTY_DASHBOARD
+  const { household_id } = householdMember
 
   // Stage 3 — Parallel fetches (household-scoped)
   const [
-    { active: monthlyCycle, previousId: prevCycleId },
+    cyclePair,
     categories,
-    lifetimeDebtTxs,
     savingsConfig,
-    payablesRecords,
-    { active: receivablesRecords },  // ← FIXED: All cycles, not just current
+    debtLedger,
   ] = await Promise.all([
     withTimeout(getCyclePair(household_id), 5000, "getCyclePair"),
     withTimeout(getHouseholdCategories(household_id), 5000, "getHouseholdCategories"),
-    withTimeout(getLifetimeDebtTransactions(household_id), 5000, "getLifetimeDebtTransactions"),
     withTimeout(getHouseholdSavingsConfig(household_id), 5000, "getHouseholdSavingsConfig"),
-    withTimeout(getActivePayables(household_id), 5000, "getActivePayables"),
-    withTimeout(getReceivablesLedger(household_id), 5000, "getReceivablesLedger"), // ← FIXED
-  ]);
+    withTimeout(getActiveDebtLedger(household_id), 5000, "getActiveDebtLedger"),
+  ])
+
+  const { active: monthlyCycle, openingBalance } = cyclePair
+  const { currentCycleId, prevCycleId } = getCycleTransactionArgs(cyclePair)
 
   // Stage 4 — Cycle-dependent fetches
   const [currentTxs, prevExpenseTxs] = await withTimeout(
     Promise.all([
-      monthlyCycle?.id 
-        ? getCycleTransactions(household_id, monthlyCycle.id) 
+      currentCycleId 
+        ? getCycleTransactions(household_id, currentCycleId) 
         : Promise.resolve([]),
       prevCycleId 
         ? getPrevCycleExpenses(household_id, prevCycleId) 
@@ -107,23 +108,24 @@ export async function getDashboardData(): Promise<DashboardData> {
     ]),
     5000,
     "stage4-cycle-scoped-fetch"
-  );
-
-  // REMOVED: const { active: receivablesRecords } = deriveReceivablesLedger(currentTxs)
-  // ^ This was the bug — only showed current cycle receivables
+  )
 
   // Calculations
-  const openingBalance = monthlyCycle?.opening_balance ?? 0;
-  const { cashBalance, cardBalance, currentExpenses } = computeBalances(currentTxs, openingBalance);
-  const previousExpenses = prevExpenseTxs.reduce((sum, tx) => sum + tx.amount, 0);
-  const { receivables, payables } = computeLifetimeDebt(lifetimeDebtTxs);
-  const savingsBalance = savingsConfig?.savings_balance ?? 0;
-  const walletName = savingsConfig?.savings_wallet_name ?? null;
-  const totalSpendable = cashBalance + cardBalance;
-  const overallLiquidity = totalSpendable + savingsBalance;
-  const netDebt = receivables - payables;
-  const runway = computeRunway(totalSpendable, currentExpenses, previousExpenses);
-  const debtLoadRatio = computeDebtLoadRatio(payables, totalSpendable);
+  const { cashBalance, cardBalance, currentExpenses } = computeBalances(currentTxs, openingBalance)
+  const previousExpenses = prevExpenseTxs.reduce((sum, tx) => sum + tx.amount, 0)
+
+  const receivables = debtLedger.totalReceivable
+  const payables = debtLedger.totalPayable
+  const receivablesRecords = debtLedger.receivables
+  const payablesRecords = debtLedger.payables
+
+  const savingsBalance = savingsConfig?.savings_balance ?? 0
+  const walletName = savingsConfig?.savings_wallet_name ?? null
+  const totalSpendable = cashBalance + cardBalance
+  const overallLiquidity = totalSpendable + savingsBalance
+  const netDebt = receivables - payables
+  const runway = computeRunway(totalSpendable, currentExpenses, previousExpenses)
+  const debtLoadRatio = computeDebtLoadRatio(payables, totalSpendable)
 
   return {
     householdMember,
@@ -146,5 +148,5 @@ export async function getDashboardData(): Promise<DashboardData> {
     rawTransactions: currentTxs,
     payablesRecords,
     receivablesRecords,
-  };
+  }
 }

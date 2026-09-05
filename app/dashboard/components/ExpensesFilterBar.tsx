@@ -159,72 +159,84 @@ const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery)
 return (
   <>
    <div className="relative">
-      {/* Toggle button — positioned at top-right, aligned with tabs row */}
-      <button
-        onClick={() => setIsOpen((p) => !p)}
-        className={`absolute -top-11 right-0 w-10 h-10 rounded-xl border flex items-center justify-center transition-all z-10 ${
-          isOpen
-            ? "bg-[#2d3436] text-white border-[#2d3436]"
-            : "bg-white border-gray-100 text-gray-400 hover:text-gray-600 hover:shadow-sm"
-        }`}
-      >
-        <Filter size={18} strokeWidth={1.5} />
-      </button>
-    {/* Collapsible filter bar */}
-          {/* Collapsible filter panel — full width */}
-      <div
-        className={`grid transition-all duration-300 ease-in-out ${
-          isOpen ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0 mt-0"
-        }`}
-      >
-       <div className={`${isOpen ? "overflow-visible" : "overflow-hidden"} min-h-0`}>
-          <div className="rounded-2xl bg-white p-4 border border-gray-100/80 shadow-sm">
-            {/* Row 1: Payment source tabs + cycle/category dropdowns */}
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              {/* Payment source tabs */}
-              <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
-                {PAYMENT_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => updateParam("payment", opt.value === "all" ? undefined : opt.value)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                      activePayment === opt.value
-                        ? "bg-[#2d3436] text-white"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    {opt.icon}
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+  {/* Toggle button — positioned at top-right, aligned with tabs row */}
+  <button
+    onClick={() => setIsOpen((p) => !p)}
+    className={`absolute -top-11 right-0 w-10 h-10 rounded-xl border flex items-center justify-center transition-all duration-200 z-10 ${
+      isOpen
+        ? "bg-[#2d3436] text-white border-[#2d3436] shadow-md"
+        : "bg-white border-gray-200 text-gray-400 hover:text-gray-700 hover:border-gray-300 hover:shadow-sm"
+    }`}
+  >
+    <Filter size={18} strokeWidth={1.5} />
+  </button>
 
-              <div className="flex items-center gap-2"></div>
+  {/* Collapsible filter bar */}
+  <div
+    className={`grid transition-all duration-300 ease-in-out ${
+      isOpen ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0 mt-0"
+    }`}
+  >
+    <div className={`${isOpen ? "overflow-visible" : "overflow-hidden"} min-h-0`}>
+      <div className="rounded-2xl bg-white p-4 border border-gray-200/70 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+
+        {/* Row 1: Payment source tabs + cycle/category dropdowns */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-gray-100">
+          {/* Payment source tabs */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+            {PAYMENT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => updateParam("payment", opt.value === "all" ? undefined : opt.value)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  activePayment === opt.value
+                    ? "bg-[#2d3436] text-white shadow-sm"
+                    : "text-gray-500 hover:text-gray-800 hover:bg-white/60"
+                }`}
+              >
+                {opt.icon}
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
             {/* Cycle selector dropdown */}
             <div className="relative" ref={cycleRef}>
               <button
                 onClick={() => setCycleOpen((p) => !p)}
-                className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-150 ${
+                  cycleOpen
+                    ? "bg-gray-200 text-gray-900"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
               >
-                <Calendar size={14} strokeWidth={1.5} />
+                <Calendar size={14} strokeWidth={1.5} className="text-gray-400" />
                 <span className="font-semibold">{cycleLabel}</span>
-                <ChevronDown size={14} strokeWidth={1.5} className={`transition-transform ${cycleOpen ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  size={14}
+                  strokeWidth={1.5}
+                  className={`text-gray-400 transition-transform duration-200 ${cycleOpen ? "rotate-180" : ""}`}
+                />
               </button>
 
               {cycleOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg ring-1 ring-black/5 border border-gray-100 py-1.5 z-20">
                   <button
                     onClick={() => {
                       updateParam("cycle", undefined)
                       setCycleOpen(false)
                     }}
-                    className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                      !urlSearchParams.get("cycle") ? "font-semibold text-gray-900" : "text-gray-600"
+                    className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm transition-colors duration-100 ${
+                      !urlSearchParams.get("cycle")
+                        ? "font-semibold text-gray-900 bg-gray-50"
+                        : "text-gray-600 hover:bg-gray-50"
                     }`}
                   >
-                    <span className="w-2 h-2 rounded-full bg-green-400" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     Current cycle
                   </button>
+                  <div className="my-1 border-t border-gray-100" />
                   {cycles.map((cycle) => {
                     const label = new Date(cycle.created_at).toLocaleDateString("en-US", {
                       month: "long",
@@ -238,13 +250,15 @@ return (
                           updateParam("cycle", cycle.id)
                           setCycleOpen(false)
                         }}
-                        className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                          isActive ? "font-semibold text-gray-900" : "text-gray-600"
+                        className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm transition-colors duration-100 ${
+                          isActive ? "font-semibold text-gray-900 bg-gray-50" : "text-gray-600 hover:bg-gray-50"
                         }`}
                       >
-                        <span className={`w-2 h-2 rounded-full ${cycle.is_closed ? "bg-gray-300" : "bg-green-400"}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${cycle.is_closed ? "bg-gray-300" : "bg-emerald-400"}`} />
                         {label}
-                        {cycle.is_closed && <span className="text-[10px] text-gray-400 ml-auto">Closed</span>}
+                        {cycle.is_closed && (
+                          <span className="text-[10px] text-gray-400 ml-auto tracking-wide">Closed</span>
+                        )}
                       </button>
                     )
                   })}
@@ -256,26 +270,37 @@ return (
             <div className="relative" ref={categoryRef}>
               <button
                 onClick={() => setCategoryOpen((p) => !p)}
-                className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-150 ${
+                  categoryOpen
+                    ? "bg-gray-200 text-gray-900"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
               >
-                <Tag size={14} strokeWidth={1.5} />
+                <Tag size={14} strokeWidth={1.5} className="text-gray-400" />
                 <span className="font-semibold">{activeCatObj?.name || "Category"}</span>
-                <ChevronDown size={14} strokeWidth={1.5} className={`transition-transform ${categoryOpen ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  size={14}
+                  strokeWidth={1.5}
+                  className={`text-gray-400 transition-transform duration-200 ${categoryOpen ? "rotate-180" : ""}`}
+                />
               </button>
 
               {categoryOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg ring-1 ring-black/5 border border-gray-100 py-1.5 z-20">
                   <button
                     onClick={() => {
                       updateParam("category", undefined)
                       setCategoryOpen(false)
                     }}
-                    className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                      activeCategory === "all" ? "font-semibold text-gray-900" : "text-gray-600"
+                    className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm transition-colors duration-100 ${
+                      activeCategory === "all"
+                        ? "font-semibold text-gray-900 bg-gray-50"
+                        : "text-gray-600 hover:bg-gray-50"
                     }`}
                   >
                     All categories
                   </button>
+                  <div className="my-1 border-t border-gray-100" />
                   {categories.map((cat) => (
                     <button
                       key={cat.id}
@@ -283,8 +308,10 @@ return (
                         updateParam("category", cat.id)
                         setCategoryOpen(false)
                       }}
-                      className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                        activeCategory === cat.id ? "font-semibold text-gray-900" : "text-gray-600"
+                      className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm transition-colors duration-100 ${
+                        activeCategory === cat.id
+                          ? "font-semibold text-gray-900 bg-gray-50"
+                          : "text-gray-600 hover:bg-gray-50"
                       }`}
                     >
                       {cat.name}
@@ -296,8 +323,10 @@ return (
                       updateParam("category", "reimbursements")
                       setCategoryOpen(false)
                     }}
-                    className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                      activeCategory === "reimbursements" ? "font-semibold text-gray-900" : "text-gray-600"
+                    className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm transition-colors duration-100 ${
+                      activeCategory === "reimbursements"
+                        ? "font-semibold text-gray-900 bg-gray-50"
+                        : "text-gray-600 hover:bg-gray-50"
                     }`}
                   >
                     Reimbursements
@@ -305,100 +334,113 @@ return (
                 </div>
               )}
             </div>
-            </div>
           </div>
+        </div>
 
-          {/* Row 2: Search, sort, clear */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Merchant search container */}
-            <div
-              className={`flex-1 min-w-[220px] flex items-center gap-2 rounded-xl px-3 py-2 transition-all ${
-                searchFocused ? "bg-white border border-gray-300 shadow-sm" : "bg-gray-100 border border-transparent"
-              }`}
-            >
-              <Search size={14} strokeWidth={1.5} className="text-gray-400 flex-shrink-0" />
-              
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
-                placeholder="Search description, merchant, or category..."
-                className="bg-transparent text-sm outline-none flex-1 placeholder:text-gray-400 text-[#2d3436]"
-              />
+        {/* Row 2: Search, sort, clear */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Merchant search container */}
+          <div
+            className={`flex-1 min-w-[220px] flex items-center gap-2 rounded-xl px-3 py-2 transition-all duration-150 ${
+              searchFocused
+                ? "bg-white border border-gray-300 shadow-sm ring-1 ring-gray-100"
+                : "bg-gray-100 border border-transparent"
+            }`}
+          >
+            <Search size={14} strokeWidth={1.5} className="text-gray-400 flex-shrink-0" />
 
-              {/* Clear Search Button */}
-              {search && (
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    setSearch("")
-                    updateParam("search", undefined)
-                  }}
-                  className="p-0.5 hover:bg-gray-200 rounded-md transition-colors"
-                >
-                  <X size={14} strokeWidth={1.5} className="text-gray-400 hover:text-gray-600" />
-                </button>
-              )}
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              placeholder="Search description, merchant, or category..."
+              className="bg-transparent text-sm outline-none flex-1 placeholder:text-gray-400 text-[#2d3436]"
+            />
 
-              {/* Submit / Enter Action Button */}
+            {/* Clear Search Button */}
+            {search && (
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={handleSearchSubmit}
-                className="flex items-center gap-1 text-[11px] font-medium text-gray-500 bg-gray-200 hover:bg-gray-300 hover:text-gray-800 px-2 py-1 rounded-md transition-all shrink-0"
+                onClick={() => {
+                  setSearch("")
+                  updateParam("search", undefined)
+                }}
+                className="p-0.5 hover:bg-gray-200 rounded-md transition-colors duration-100"
               >
-                <span>Search</span>
-                <kbd className="text-[9px] font-mono bg-white/70 px-1 rounded text-gray-500 border border-gray-300">↵</kbd>
-              </button>
-            </div>
-
-            {/* Sort dropdown */}
-            <div className="relative" ref={sortRef}>
-              <button
-                onClick={() => setSortOpen((p) => !p)}
-                className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
-              >
-                <ArrowUpDown size={14} strokeWidth={1.5} />
-                {activeSortLabel}
-                <ChevronDown size={14} strokeWidth={1.5} className={`transition-transform ${sortOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {sortOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
-                  {SORT_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        updateParam("sort", opt.value === "date_newest" ? undefined : opt.value)
-                        setSortOpen(false)
-                      }}
-                      className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                        activeSort === opt.value ? "font-semibold text-gray-900" : "text-gray-600"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Clear filters */}
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-semibold hover:bg-red-100 transition-colors"
-              >
-                <X size={12} strokeWidth={2} />
-                Clear filters
+                <X size={14} strokeWidth={1.5} className="text-gray-400 hover:text-gray-600" />
               </button>
             )}
+
+            {/* Submit / Enter Action Button */}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleSearchSubmit}
+              className="flex items-center gap-1 text-[11px] font-medium text-gray-500 bg-gray-200 hover:bg-gray-800 hover:text-white px-2 py-1 rounded-md transition-all duration-150 shrink-0"
+            >
+              <span>Search</span>
+              <kbd className="text-[9px] font-mono bg-white/80 px-1 rounded text-gray-500 border border-gray-300">↵</kbd>
+            </button>
           </div>
+
+          {/* Sort dropdown */}
+          <div className="relative" ref={sortRef}>
+            <button
+              onClick={() => setSortOpen((p) => !p)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-150 ${
+                sortOpen
+                  ? "bg-gray-200 text-gray-900"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <ArrowUpDown size={14} strokeWidth={1.5} className="text-gray-400" />
+              {activeSortLabel}
+              <ChevronDown
+                size={14}
+                strokeWidth={1.5}
+                className={`text-gray-400 transition-transform duration-200 ${sortOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {sortOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg ring-1 ring-black/5 border border-gray-100 py-1.5 z-20">
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => {
+                      updateParam("sort", opt.value === "date_newest" ? undefined : opt.value)
+                      setSortOpen(false)
+                    }}
+                    className={`flex items-center gap-2 w-full text-left px-3 py-2 text-sm transition-colors duration-100 ${
+                      activeSort === opt.value
+                        ? "font-semibold text-gray-900 bg-gray-50"
+                        : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Clear filters */}
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-1.5 px-3 py-2 bg-gray-900 text-white rounded-xl text-xs font-semibold hover:bg-black transition-colors duration-150"
+            >
+              <X size={12} strokeWidth={2} />
+              Clear filters
+            </button>
+          )}
         </div>
       </div>
     </div>
+  </div>
+</div>
   </>
 )}
