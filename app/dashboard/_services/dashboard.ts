@@ -2,6 +2,9 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
+import { cache } from "react" // add this import if not already present
+ 
+
 
 import { getCyclePair, getCycleTransactionArgs } from '../_db/cycles';
 
@@ -9,7 +12,6 @@ import {
   getCycleTransactions, 
   getPrevCycleExpenses, 
   getActiveDebtLedger,
-  getSettledDebtHistory // include only if you render the settled tab
 } from '../_db/transactions';
 
 // import { getLifetimeDebtTransactions } from '../_db/debt';
@@ -55,16 +57,13 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   ]);
 }
 
-export async function getDashboardData(): Promise<DashboardData> {
+
+export const getDashboardData = cache(async (): Promise<DashboardData> => {
+  
   const supabase = await createClient()
 
   // Stage 1 — Auth
-  const { data, error } = await withTimeout(
-    supabase.auth.getClaims(),
-    4000,
-    "auth.getClaims"
-  )
-
+  const { data, error } = await withTimeout(supabase.auth.getClaims(), 4000, "auth.getClaims")
   if (error || !data?.claims?.sub) {
     console.error("Auth error:", error)
     redirect("/login")
@@ -72,45 +71,39 @@ export async function getDashboardData(): Promise<DashboardData> {
   const userId = data.claims.sub
 
   // Stage 2 — Household lookup
-  const householdMember = await withTimeout(
-    getHouseholdMember(userId),
-    4000,
-    "getHouseholdMember"
-  )
+  const householdMember = await withTimeout(getHouseholdMember(userId), 4000, "getHouseholdMember")
   if (!householdMember) return EMPTY_DASHBOARD
   const { household_id } = householdMember
 
-  // Stage 3 — Parallel fetches (household-scoped)
-  const [
-    cyclePair,
-    categories,
-    savingsConfig,
-    debtLedger,
-  ] = await Promise.all([
-    withTimeout(getCyclePair(household_id), 5000, "getCyclePair"),
-    withTimeout(getHouseholdCategories(household_id), 5000, "getHouseholdCategories"),
-    withTimeout(getHouseholdSavingsConfig(household_id), 5000, "getHouseholdSavingsConfig"),
-    withTimeout(getActiveDebtLedger(household_id), 5000, "getActiveDebtLedger"),
-  ])
+  // Stage 3 — Kick off ALL household-scoped fetches at once, including
+  // the cycle-dependent ones, by chaining off cyclePair as soon as it's
+  // ready instead of waiting on the whole Promise.all batch first.
+  const cyclePairPromise = withTimeout(getCyclePair(household_id), 5000, "getCyclePair")
+
+  const cycleTxsPromise = cyclePairPromise.then((cyclePair) => {
+    const { currentCycleId, prevCycleId } = getCycleTransactionArgs(cyclePair)
+    return withTimeout(
+      Promise.all([
+        currentCycleId ? getCycleTransactions(household_id, currentCycleId) : Promise.resolve([]),
+        prevCycleId ? getPrevCycleExpenses(household_id, prevCycleId) : Promise.resolve([]),
+      ]),
+      5000,
+      "cycle-scoped-fetch"
+    )
+  })
+
+  const [cyclePair, categories, savingsConfig, debtLedger, [currentTxs, prevExpenseTxs]] =
+    await Promise.all([
+      cyclePairPromise,
+      withTimeout(getHouseholdCategories(household_id), 5000, "getHouseholdCategories"),
+      withTimeout(getHouseholdSavingsConfig(household_id), 5000, "getHouseholdSavingsConfig"),
+      withTimeout(getActiveDebtLedger(household_id), 5000, "getActiveDebtLedger"),
+      cycleTxsPromise,
+    ])
 
   const { active: monthlyCycle, openingBalance } = cyclePair
-  const { currentCycleId, prevCycleId } = getCycleTransactionArgs(cyclePair)
 
-  // Stage 4 — Cycle-dependent fetches
-  const [currentTxs, prevExpenseTxs] = await withTimeout(
-    Promise.all([
-      currentCycleId 
-        ? getCycleTransactions(household_id, currentCycleId) 
-        : Promise.resolve([]),
-      prevCycleId 
-        ? getPrevCycleExpenses(household_id, prevCycleId) 
-        : Promise.resolve([]),
-    ]),
-    5000,
-    "stage4-cycle-scoped-fetch"
-  )
-
-  // Calculations
+  // Calculations — unchanged
   const { cashBalance, cardBalance, currentExpenses } = computeBalances(currentTxs, openingBalance)
   const previousExpenses = prevExpenseTxs.reduce((sum, tx) => sum + tx.amount, 0)
 
@@ -149,4 +142,4 @@ export async function getDashboardData(): Promise<DashboardData> {
     payablesRecords,
     receivablesRecords,
   }
-}
+})

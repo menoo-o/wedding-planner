@@ -12,15 +12,11 @@ import {
   Clock,
   Shield,
   Sparkles,
-  Bell,
 } from "lucide-react"
 
 import { getDashboardData } from './_services/dashboard'
 import { getLiveServerLiquidity } from "./components/liquidity-widget/liquidity"
-
 import { getVendors } from "@/app/dashboard/_services/vendors"
-
-
 import RecentExpenses from "./components/ExpensesDashBlock/Activity"
 import ActionBar from "./components/ui/ActionBar"
 
@@ -85,8 +81,11 @@ async function DashboardContent() {
   const velocityRatio = previousExpenses > 0 ? currentExpenses / previousExpenses : 0
   const isBurningFaster = velocityRatio > 1
 
-  return (
-   <div className="max-w-7xl mx-auto space-y-6">
+ return (
+    <>
+      {/* dashboard main pg */}
+     <div className="max-w-7xl mx-auto space-y-6">
+      
       {/* ── Top Bar ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -94,19 +93,13 @@ async function DashboardContent() {
           <p className="text-sm text-gray-400 mt-0.5">Welcome back to your household ledger</p>
         </div>
 
+        
+
     
       </div>
 
       {/* ── Action Bar ───────────────────────────────────────── */}
-      {/* WRAPPED in client component for modal state */}
-      <ActionBar
-        householdId={householdId}
-        currentCycleId={currentCycleId}
-        createdBy={createdBy}
-        cashBalance={cash}
-        cardBalance={card}
-        initialCategories={categories.map(c => ({ id: c.id, name: c.name }))}
-    />
+    
 
       {/* ── Financial Snapshot ───────────────────────────────── */}
       {/* ... rest of your snapshot cards stay the same ... */}
@@ -130,6 +123,15 @@ async function DashboardContent() {
             <span>Card: Rs {card.toLocaleString()}</span>
           </div>
         </div>
+
+         {/* <ActionBar
+                householdId={householdId}
+                currentCycleId={currentCycleId}
+                createdBy={createdBy}
+                cashBalance={cash}
+                cardBalance={card}
+                initialCategories={categories.map((c) => ({ id: c.id, name: c.name }))}
+              /> */}
 
         {/* This Month Spend */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
@@ -328,7 +330,7 @@ async function DashboardContent() {
                     <div className="w-full bg-gray-100 rounded-full h-1.5">
                       <div
                         className="h-1.5 rounded-full transition-all"
-                        style={{ width: `${pct}%`, backgroundColor: colors[i] || colors[4] }}
+                       style={{ width: `${pct}%`, backgroundColor: colors[i] || colors[4] }}
                       />
                     </div>
                   </div>
@@ -338,26 +340,7 @@ async function DashboardContent() {
           </div>
         </div>
       </div>
-
-      {/* ═══════════════════════════════════════════════════════
-          COMMENTED OUT — moved to other pages or modals
-          ═══════════════════════════════════════════════════════ */}
-      {/* <DashForm ... /> */}
-      {/* <TopUpForm ... />  done*/}
-      {/* <LoanForm ... /> */}
-      {/* <AddCategoryForm ... />  - done */} 
-      {/* <ActivePayables ... /> */}
-      {/* <ReceivablesList ... /> */}
-      {/* <VendorAccountsWidget ... /> */}
-      {/* <AdvancedMetrics ... /> */}
-      {/* <LiquidityWidget ... /> */}
-      {/* <SavingsVaultWidget ... /> */}
-      {/* <HouseholdInfo ... /> */}
     </div>
+  </>
   )
 }
-
-// ═══════════════════════════════════════════════════════════════
-// CLIENT COMPONENT — Action Bar with Modal State
-// ═══════════════════════════════════════════════════════════════
-

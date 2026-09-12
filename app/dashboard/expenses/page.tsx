@@ -19,7 +19,7 @@ import { getPrevCycleExpenses, getCycleTransactions } from "../_db/transactions"
 // import { getTransactionsByType } from "../_db/transactions" ->> reusable query helper that fetches a paginated, sorted list
 import { getAllCycles } from '../_db/cycles'  
 // import { getHouseholdCategories } from "../_db/categories"
-import ActionBar from "../components/ui/ActionBar"
+
 import ExpensesFilterBar from "../components/ExpensesFilterBar"
 import {getLiveServerLiquidity} from "../components/liquidity-widget/liquidity"
 import {getTopCategories} from '@/app/dashboard/_lib/utils'
@@ -273,15 +273,7 @@ async function ExpensesContent({
        
       </div>
 
-      {/* ── Action Bar ───────────────────────────────────────── */}
-      <ActionBar
-        householdId={householdId}
-        currentCycleId={currentCycleId}
-        createdBy={createdBy}
-        cashBalance={cash}
-        cardBalance={card}
-        initialCategories={categories.map((c) => ({ id: c.id, name: c.name }))}
-      />
+      
 
       {/* ── Stats Row ────────────────────────────────────────── */}
       <div className="grid grid-cols-4 gap-4 mb-8">
