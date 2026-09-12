@@ -2,25 +2,8 @@
 import React, { useState } from 'react'
 //app/dashboard/components/expenses/Activity.tsx
 // Updated interface matching your client-side requirements
-interface ExpenseTransaction {
-  id: string
-  amount: number
-  transaction_type: "top_up" | "expense" | "transfer" | "loan_in" | "loan_out" | "loan_return" | "settlement" | "refund" | "adjustment"
-  
-  // 🏆 THE FIX: Add "personal" right here to support third-party paid bills!
-  payment_account: "cash" | "card" | "personal" 
-  
-  description: string 
-  related_transaction_id: string | null
-  category_id?: string | null
-  category_name?: string 
-  created_at?: string | null
-  notes?: string | null 
-  
-  // Optional additions to prevent any future structural typing noise:
-  loan_status?: "pending" | "partial" | "settled" | null
-  reimbursement_status?: "pending" | "partial" | "settled" | null
-}
+
+import {ExpenseTransaction } from '@/lib/types'
 
 
 

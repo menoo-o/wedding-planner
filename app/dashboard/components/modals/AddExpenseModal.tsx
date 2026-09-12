@@ -83,6 +83,12 @@ export default function AddExpenseModal({
     },
   })
 
+   const [mounted, setMounted] = useState(false)
+
+   useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const watchedPaidBy = watch("paid_by")
   const watchedPaymentAccount = watch("payment_account")
 
@@ -205,7 +211,7 @@ async function onSubmit(data: ExpenseFormData) {
     },
   ]
 
-  if (!isOpen) return null
+  if (!mounted || !isOpen) return null
 
   return (
     <>

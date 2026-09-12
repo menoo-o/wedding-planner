@@ -8,6 +8,7 @@ import { ReactNode } from "react"
 import DashboardHeaderBar from "@/app/dashboard/components/Dashboardheaderbar"
 import ActionBarSkeleton from "@/app/dashboard/components/ActionBarSkeleton"
 
+
 // Note: getDashboardData() and getLiveServerLiquidity() no longer live here —
 // they moved into DashboardHeaderBar, which is the only part of this layout
 // that actually depends on them. That lets the static shell (sidebar, logo)

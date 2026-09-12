@@ -16,9 +16,12 @@ import {
 
 import { getDashboardData } from './_services/dashboard'
 import { getLiveServerLiquidity } from "./components/liquidity-widget/liquidity"
-import { getVendors } from "@/app/dashboard/_services/vendors"
+// import { getVendors } from "@/app/dashboard/_services/vendors"
 import RecentExpenses from "./components/ExpensesDashBlock/Activity"
-import ActionBar from "./components/ui/ActionBar"
+
+import {ExpenseTransaction } from '@/lib/types'
+
+// import ActionBar from "./components/ui/ActionBar"
 
 // ── Skeleton ──────────────────────────────────────────────────
 
@@ -54,18 +57,18 @@ export default async function DashboardPage() {
 
 async function DashboardContent() {
   const {
-    householdMember, monthlyCycle, categories, receivables, payables, netDebt, currentExpenses, previousExpenses, runway,
+    householdMember, categories, receivables, payables, netDebt, currentExpenses, previousExpenses, runway,
     debtLoadRatio, rawTransactions, walletName, savingsBalance,
     receivablesRecords, payablesRecords,
   } = await getDashboardData()
 
   const householdId = householdMember?.household_id ?? ""
-  const currentCycleId = monthlyCycle?.id ?? ""
-  const createdBy = householdMember?.user_id ?? ""
+  // const currentCycleId = monthlyCycle?.id ?? ""
+  // const createdBy = householdMember?.user_id ?? ""
 
   const [liveLiquidity] = await Promise.all([
     getLiveServerLiquidity(householdId),
-    getVendors(householdId),
+    // getVendors(householdId),
   ])
 
   const { cash, card, total, monthlyExpenses } = liveLiquidity
@@ -295,7 +298,7 @@ async function DashboardContent() {
           </div>
           <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-hidden">
             <RecentExpenses
-              transactions={expensesWithCategoryNames}
+            transactions={expensesWithCategoryNames as unknown as ExpenseTransaction[]}
               currentExpensesTotal={currentExpenses}
             />
           </div>
