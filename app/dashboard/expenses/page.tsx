@@ -1,6 +1,6 @@
 // app/dashboard/expenses/page.tsx
 
-import { Suspense } from "react"
+import { Suspense, JSX } from "react"
 import { connection } from 'next/server'
 import Link from "next/link"
 
@@ -103,7 +103,7 @@ async function ExpensesContent({
 
   const householdId = householdMember?.household_id ?? ""
   const currentCycleId = monthlyCycle?.id ?? ""
-  const createdBy = householdMember?.user_id ?? ""
+  // const createdBy = householdMember?.user_id ?? ""
 
   await connection(); 
   
