@@ -111,12 +111,12 @@ async function ExpensesContent({
 
 
   //GET THE CASH & CARD BALANCE FROM THE LIVE SERVER
-    const [liveLiquidity] = await Promise.all([
+    const [liveLiquidity, allCycles] = await Promise.all([
       getLiveServerLiquidity(householdId),
+      getAllCycles(householdId),
     ])
 
-  const {cash, card}  = liveLiquidity || {cash: 0, card: 0}
-  const allCycles = await getAllCycles(householdId)
+  const { cash, card } = liveLiquidity || { cash: 0, card: 0 }
 
   const cycles: MonthlyCycle[] = ((allCycles as MonthlyCycle[]) || []).map((c) => ({
     id: c.id,
@@ -232,28 +232,34 @@ async function ExpensesContent({
   
   // Velocity ratio: how fast are we burning cash vs last month?
   // Find the cycle BEFORE the selected one (in the desc-sorted array)
+ let previousCycleExpenses: number
+
+if (isCurrentCycle) {
+  // Already computed by getDashboardData for the current cycle — reuse it,
+  // no extra round trip needed.
+  previousCycleExpenses = previousExpenses
+} else {
   const selectedIndex = cycles.findIndex((c) => c.id === selectedCycleId)
   const previousCycleId = selectedIndex >= 0 && selectedIndex < cycles.length - 1
     ? cycles[selectedIndex + 1]?.id ?? null  // next in array = chronologically earlier
     : null
 
-  // Fetch previous cycle's expenses for comparison
-  let previousCycleExpenses = 0
+  previousCycleExpenses = 0
   if (previousCycleId) {
     const prevExpenses = await getPrevCycleExpenses(householdId, previousCycleId)
     previousCycleExpenses = prevExpenses.reduce((sum, tx) => sum + tx.amount, 0)
   }
+}
 
-  // Compare selected cycle vs its previous
-  const velocityRatio = previousCycleExpenses > 0 
-    ? selectedCycleExpenses / previousCycleExpenses 
-    : 0
+// Compare selected cycle vs its previous
+const velocityRatio = previousCycleExpenses > 0
+  ? selectedCycleExpenses / previousCycleExpenses
+  : 0
 
-    const isBurningFaster = velocityRatio > 1
-    const totalLiquidity = cash + card
+const isBurningFaster = velocityRatio > 1
+const totalLiquidity = cash + card
 
-
-  const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
+const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
 //parent / main expenses page
   return (
     <div className="max-w-7xl mx-auto space-y-6">
