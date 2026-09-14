@@ -18,30 +18,9 @@ import { getDashboardData } from './_services/dashboard'
 import { getLiveServerLiquidity } from "./components/liquidity-widget/liquidity"
 // import { getVendors } from "@/app/dashboard/_services/vendors"
 import RecentExpenses from "./components/ExpensesDashBlock/Activity"
+import DashboardSkeleton from "./components/DashboardSkeleton"
 
 import {ExpenseTransaction } from '@/lib/types'
-
-// import ActionBar from "./components/ui/ActionBar"
-
-// ── Skeleton ──────────────────────────────────────────────────
-
-function DashboardSkeleton() {
-  return (
-    <div className="p-8 animate-pulse">
-      <div className="h-4 bg-gray-200 rounded-lg w-48 mb-8" />
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-28 bg-gray-200 rounded-2xl" />
-        ))}
-      </div>
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-56 bg-gray-200 rounded-2xl" />
-        ))}
-      </div>
-    </div>
-  )
-}
 
 // ── Main Page ─────────────────────────────────────────────────
 
@@ -63,8 +42,6 @@ async function DashboardContent() {
   } = await getDashboardData()
 
   const householdId = householdMember?.household_id ?? ""
-  // const currentCycleId = monthlyCycle?.id ?? ""
-  // const createdBy = householdMember?.user_id ?? ""
 
   const [liveLiquidity] = await Promise.all([
     getLiveServerLiquidity(householdId),
@@ -83,17 +60,17 @@ async function DashboardContent() {
   const obligationCount = receivablesRecords.length + payablesRecords.length
   const velocityRatio = previousExpenses > 0 ? currentExpenses / previousExpenses : 0
   const isBurningFaster = velocityRatio > 1
-
+ //dashboard/page.tsx
  return (
     <>
       {/* dashboard main pg */}
-     <div className="max-w-7xl mx-auto space-y-6">
+     <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-6 lg:px-0">
       
       {/* ── Top Bar ──────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[#2d3436]">Dashboard</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Welcome back to your household ledger</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#2d3436]">Dashboard</h1>
+          <p className="text-xs sm:text-sm text-gray-400 mt-0.5">Welcome back to your household ledger</p>
         </div>
 
         
@@ -112,37 +89,29 @@ async function DashboardContent() {
         </h2>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {/* Liquidity */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-gray-400 mb-3">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-gray-400 mb-2 sm:mb-3">
             <Wallet size={14} strokeWidth={1.5} />
             <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">Liquidity</span>
           </div>
-          <p className="text-2xl font-bold text-[#2d3436]">Rs {total.toLocaleString()}</p>
-          <div className="flex gap-3 mt-2 text-xs text-gray-400">
+          <p className="text-xl sm:text-2xl font-bold text-[#2d3436]">Rs {total.toLocaleString()}</p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
             <span>Cash: Rs {cash.toLocaleString()}</span>
-            <span>·</span>
+            <span className="hidden sm:inline">·</span>
             <span>Card: Rs {card.toLocaleString()}</span>
           </div>
         </div>
 
-         {/* <ActionBar
-                householdId={householdId}
-                currentCycleId={currentCycleId}
-                createdBy={createdBy}
-                cashBalance={cash}
-                cardBalance={card}
-                initialCategories={categories.map((c) => ({ id: c.id, name: c.name }))}
-              /> */}
-
+  
         {/* This Month Spend */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-gray-400 mb-3">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-gray-400 mb-2 sm:mb-3">
             <TrendingDown size={14} strokeWidth={1.5} />
             <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">This Month Spend</span>
           </div>
-          <p className="text-2xl font-bold text-[#e17055]">-Rs {monthlyExpenses.toLocaleString()}</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#e17055]">-Rs {monthlyExpenses.toLocaleString()}</p>
           <p className="text-xs text-gray-400 mt-2">
             {previousExpenses > 0 ? (
               <span className={isBurningFaster ? "text-[#e17055]" : "text-[#00b894]"}>
@@ -155,22 +124,22 @@ async function DashboardContent() {
         </div>
 
         {/* Obligations */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-gray-400 mb-3">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-gray-400 mb-2 sm:mb-3">
             <Scale size={14} strokeWidth={1.5} />
             <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">Obligations</span>
           </div>
-          <p className="text-2xl font-bold text-[#2d3436]">{obligationCount}</p>
-          <div className="flex gap-3 mt-2 text-xs text-gray-400">
+          <p className="text-xl sm:text-2xl font-bold text-[#2d3436]">{obligationCount}</p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
             <span>{receivablesRecords.length} receivable{receivablesRecords.length !== 1 ? "s" : ""}</span>
-            <span>·</span>
+            <span className="hidden sm:inline">·</span>
             <span>{payablesRecords.length} payable{payablesRecords.length !== 1 ? "s" : ""}</span>
           </div>
         </div>
 
         {/* Net Debt */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-gray-400 mb-3">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-gray-400 mb-2 sm:mb-3">
             {netDebt >= 0 ? (
               <ArrowUpRight size={14} strokeWidth={1.5} className="text-[#00b894]" />
             ) : (
@@ -178,7 +147,7 @@ async function DashboardContent() {
             )}
             <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">Net Debt</span>
           </div>
-          <p className={`text-2xl font-bold ${netDebt >= 0 ? "text-[#00b894]" : "text-[#e17055]"}`}>
+          <p className={`text-xl sm:text-2xl font-bold ${netDebt >= 0 ? "text-[#00b894]" : "text-[#e17055]"}`}>
             {netDebt >= 0 ? "+" : "-"}Rs {Math.abs(netDebt).toLocaleString()}
           </p>
           <p className="text-xs text-gray-400 mt-2">
@@ -188,7 +157,7 @@ async function DashboardContent() {
       </div>
 
       {/* ── Insight Cards Row ────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 sm:mb-8">
         {/* Credit & Debt */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm">
           <h3 className="text-[10px] font-bold tracking-[0.15em] text-gray-400 uppercase mb-5">
@@ -261,7 +230,7 @@ async function DashboardContent() {
         </div>
 
         {/* Savings Vault */}
-        <div className="bg-[#2d3436] rounded-2xl p-6 text-white relative overflow-hidden shadow-sm">
+        <div className="bg-[#2d3436] rounded-2xl p-6 text-white relative overflow-hidden shadow-sm sm:col-span-2 lg:col-span-1">
           <div className="absolute top-4 right-4 opacity-10">
             <Shield size={64} strokeWidth={1} />
           </div>
@@ -282,9 +251,9 @@ async function DashboardContent() {
       </div>
 
       {/* ── Recent Activity + Spending Analysis ──────────────── */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Recent Activity */}
-        <div className="col-span-2">
+        <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[11px] font-bold tracking-[0.15em] text-gray-400 uppercase">
               Recent Activity
@@ -296,7 +265,7 @@ async function DashboardContent() {
               View All <ChevronRight size={14} strokeWidth={1.5} />
             </Link>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-hidden overflow-x-auto">
             <RecentExpenses
             transactions={expensesWithCategoryNames as unknown as ExpenseTransaction[]}
               currentExpensesTotal={currentExpenses}
