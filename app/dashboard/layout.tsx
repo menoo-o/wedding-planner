@@ -9,15 +9,18 @@ import DashboardHeaderBar from "@/app/dashboard/components/Dashboardheaderbar"
 import ActionBarSkeleton from "@/app/dashboard/components/ActionBarSkeleton"
 
 
-// Note: getDashboardData() and getLiveServerLiquidity() no longer live here —
+
 // they moved into DashboardHeaderBar, which is the only part of this layout
 // that actually depends on them. That lets the static shell (sidebar, logo)
 // render immediately instead of blocking on those fetches.
+
+// app/dashboard/layout.tsx
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[#f0f2f5] flex font-sans">
       {/* Sidebar */}
-      <aside className="w-56 bg-white flex flex-col fixed h-full border-r border-gray-100/50 z-40">
+     {/* temp fix - remove the sidebar - in mobile the nav will shift to bottom */}
+      <aside className="hidden md:block w-56 bg-white flex flex-col fixed h-full border-r border-gray-100/50 z-40">
         {/* Logo */}
         <div className="p-5 pb-3">
           <Link href="/dashboard" className="flex items-center gap-3 group">
@@ -42,12 +45,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Left ICON Content Area */}
-      <div className="flex-1 ml-56 min-h-screen relative">
+     <div className="flex-1 w-full min-w-0 ml-0 lg:ml-56 min-h-screen relative">
         <Suspense fallback={<ActionBarSkeleton />}>
           <DashboardHeaderBar />
         </Suspense>
 
-        <main className="p-8">{children}</main>
+        <main className="p-4 sm:p-6 lg:p-8">
+          {children}
+        </main>
       </div>
     </div>
   )

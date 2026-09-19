@@ -16,7 +16,7 @@ export default async function DashboardHeaderBar() {
   const { cash, card } = await getLiveServerLiquidity(householdId)
 
   return (
-    <div className="fixed top-6 right-8 z-50 flex items-center gap-1.5 bg-white/95 rounded-2xl shadow-[0_2px_4px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.08)] border border-gray-200/70 ring-1 ring-black/[0.02] p-1.5">
+    <div className="hidden md:block fixed top-6 right-8 z-50 flex items-center gap-1.5 bg-white/95 rounded-2xl shadow-[0_2px_4px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.08)] border border-gray-200/70 ring-1 ring-black/[0.02] p-1.5">
       <ActionBar
         householdId={householdId}
         currentCycleId={currentCycleId}
