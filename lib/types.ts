@@ -120,6 +120,7 @@ export type LoanStatus = "pending" | "partial" | "settled";
 // };
 
 // ── Dashboard Data ───────────────────────────────────────────
+// ── Dashboard Data ───────────────────────────────────────────
 export interface DashboardData {
   householdMember: HouseholdMember | null;
   userId: string | null;
@@ -141,6 +142,10 @@ export interface DashboardData {
   rawTransactions: CycleCalculationTransaction[];
   payablesRecords: PayableRecord[];
   receivablesRecords: ReceivableRecord[];
+  liveCash: number;
+  liveCard: number;
+  liveTotal: number;
+  liveMonthlyExpenses: number;
 }
 
 // export type LoanStatus = "pending" | "partial" | "settled"

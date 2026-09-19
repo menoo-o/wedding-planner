@@ -32,23 +32,18 @@ export default async function DashboardPage() {
   )
 }
 
+//dashboard/page.tsx - the main page !
 // ── Data + Content ────────────────────────────────────────────
 
 async function DashboardContent() {
   const {
-    householdMember, categories, receivables, payables, netDebt, currentExpenses, previousExpenses, runway,
+     categories, receivables, payables, netDebt, currentExpenses, previousExpenses, runway,
     debtLoadRatio, rawTransactions, walletName, savingsBalance,
     receivablesRecords, payablesRecords,
+    liveCash: cash, liveCard: card, liveTotal: total, liveMonthlyExpenses: monthlyExpenses,
   } = await getDashboardData()
 
-  const householdId = householdMember?.household_id ?? ""
 
-  const [liveLiquidity] = await Promise.all([
-    getLiveServerLiquidity(householdId),
-    // getVendors(householdId),
-  ])
-
-  const { cash, card, total, monthlyExpenses } = liveLiquidity
 
  
   const rawExpenses = (rawTransactions || []).filter((tx) => tx.transaction_type === "expense")
@@ -267,7 +262,7 @@ async function DashboardContent() {
           </div>
           <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-hidden overflow-x-auto">
             <RecentExpenses
-            transactions={expensesWithCategoryNames as unknown as ExpenseTransaction[]}
+              transactions={expensesWithCategoryNames as unknown as ExpenseTransaction[]}
               currentExpensesTotal={currentExpenses}
             />
           </div>

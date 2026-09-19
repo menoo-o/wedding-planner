@@ -124,3 +124,81 @@ export function computeDebtLoadRatio(
   return payables > 0 ? 100 : 0;
 }
 
+// app/dashboard/_lib/finance.ts
+// Moved out of _db/ — this is now pure computation (same category as
+// computeBalances), not I/O. It takes the cycle + transactions the caller
+// already fetched instead of re-querying Supabase for rows that were
+// already pulled in getDashboardData's Stage 3 batch.
+
+// app/dashboard/_lib/finance.ts
+type CycleRow = {
+  id: string
+  opening_cash_balance: string | number | null | undefined
+  opening_bank_balance: string | number | null | undefined
+}
+
+type LiquidityTransaction = {
+  amount: string | number | null
+  payment_account: string | null
+  transaction_type: string
+  description: string | null
+}
+
+export function computeLiveLiquidity(
+  cycle: CycleRow | null,
+  transactions: LiquidityTransaction[]
+) {
+  if (!cycle) {
+    return { cash: 0, card: 0, total: 0, monthlyExpenses: 0, cycleId: null }
+  }
+
+  const openingCash = parseFloat(String(cycle.opening_cash_balance ?? "0"))
+  const openingBank = parseFloat(String(cycle.opening_bank_balance ?? "0"))
+
+  let cashChange = 0
+  let bankChange = 0
+  let accumulatedExpenses = 0
+
+  transactions.forEach((tx) => {
+    const val = parseFloat(String(tx.amount ?? "0"))
+    const isAddition = ["top_up", "loan_return", "loan_in"].includes(tx.transaction_type)
+    const isDeduction = ["expense", "settlement", "loan_out"].includes(tx.transaction_type)
+
+    const isPaidExpense = tx.transaction_type === "expense" && tx.payment_account !== null
+    const isPendingVendorExpense = tx.transaction_type === "expense" && tx.payment_account === null
+
+    if (isPaidExpense || isPendingVendorExpense) {
+      accumulatedExpenses += val
+    }
+
+    // Cash interactions
+    if (tx.payment_account === "cash") {
+      if (isAddition) cashChange += val
+      if (isDeduction) cashChange -= val
+      if (tx.transaction_type === "transfer") {
+        if (tx.description?.startsWith("Transfer in")) cashChange += val
+        if (tx.description?.startsWith("Transfer out")) cashChange -= val
+      }
+    }
+    // Bank Card interactions
+    else if (tx.payment_account === "card") {
+      if (isAddition) bankChange += val
+      if (isDeduction) bankChange -= val
+      if (tx.transaction_type === "transfer") {
+        if (tx.description?.startsWith("Transfer in")) bankChange += val
+        if (tx.description?.startsWith("Transfer out")) bankChange -= val
+      }
+    }
+  })
+
+  const finalCash = openingCash + cashChange
+  const finalBank = openingBank + bankChange
+
+  return {
+    cash: finalCash,
+    card: finalBank,
+    total: finalCash + finalBank,
+    monthlyExpenses: accumulatedExpenses,
+    cycleId: cycle.id,
+  }
+}

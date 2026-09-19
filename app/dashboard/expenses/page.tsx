@@ -21,7 +21,6 @@ import { getAllCycles } from '../_db/cycles'
 // import { getHouseholdCategories } from "../_db/categories"
 
 import ExpensesFilterBar from "../components/ExpensesFilterBar"
-import {getLiveServerLiquidity} from "../components/liquidity-widget/liquidity"
 import {getTopCategories} from '@/app/dashboard/_lib/utils'
 import { groupByDay } from '@/app/dashboard/_lib/utils'
 import { ExpenseTransaction } from "../_lib/utils"
@@ -74,7 +73,7 @@ export default function ExpensesPage({
 }
 
 // ── Data + Content ────────────────────────────────────────────
-
+//dashboard/expenses/page.tsx
 async function ExpensesContent({
   searchParams,
 }: {
@@ -97,26 +96,18 @@ async function ExpensesContent({
     rawTransactions,
     payablesRecords,
     receivablesRecords,
-    // cash,
-    // card,
+    liveCash: cash, liveCard: card, liveTotal: total, liveMonthlyExpenses: monthlyExpenses,
   } = await getDashboardData()
 
   const householdId = householdMember?.household_id ?? ""
   const currentCycleId = monthlyCycle?.id ?? ""
   // const createdBy = householdMember?.user_id ?? ""
 
-  await connection(); 
-  
+  await connection();
 
-
-
-  //GET THE CASH & CARD BALANCE FROM THE LIVE SERVER
-    const [liveLiquidity, allCycles] = await Promise.all([
-      getLiveServerLiquidity(householdId),
-      getAllCycles(householdId),
-    ])
-
-  const { cash, card } = liveLiquidity || { cash: 0, card: 0 }
+  // liveLiquidity no longer fetched separately — cash/card/total/monthlyExpenses
+  // already came off getDashboardData() above via computeLiveLiquidity().
+  const allCycles = await getAllCycles(householdId)
 
   const cycles: MonthlyCycle[] = ((allCycles as MonthlyCycle[]) || []).map((c) => ({
     id: c.id,
