@@ -41,8 +41,8 @@ export interface MonthlyCycle {
   month: number
   year: number
   opening_balance: number
-  opening_cash_balance?: number
-  opening_bank_balance?: number
+  opening_cash_balance: string | number | null | undefined
+  opening_bank_balance: string | number | null | undefined
   days_in_cycle?: number
 }
 // ── Category ─────────────────────────────────────────────────

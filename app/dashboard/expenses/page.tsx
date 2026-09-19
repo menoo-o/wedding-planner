@@ -96,7 +96,7 @@ async function ExpensesContent({
     rawTransactions,
     payablesRecords,
     receivablesRecords,
-    liveCash: cash, liveCard: card, liveTotal: total, liveMonthlyExpenses: monthlyExpenses,
+    liveCash: cash, liveCard: card, 
   } = await getDashboardData()
 
   const householdId = householdMember?.household_id ?? ""
