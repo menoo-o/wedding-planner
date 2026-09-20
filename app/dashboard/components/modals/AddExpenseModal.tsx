@@ -2,6 +2,7 @@
 "use client"
 
 import { useState, useTransition, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { createClient } from "@/utils/supabase/client"
@@ -57,7 +58,6 @@ export default function AddExpenseModal({
   const supabase = createClient()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  // const { toast, show, dismiss } = useToast()
 
   const [isAddingCategory, setIsAddingCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
@@ -85,12 +85,23 @@ export default function AddExpenseModal({
 
    const [mounted, setMounted] = useState(false)
 
-   useEffect(() => {
+  useEffect(() => {
     setMounted(true)
   }, [])
 
+  // Lock page scroll behind the modal
+  useEffect(() => {
+    if (!isOpen) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [isOpen])
+
   const watchedPaidBy = watch("paid_by")
   const watchedPaymentAccount = watch("payment_account")
+  const watchedCategory = watch("category_id")
 
   // Auto-set payment_account when paid_by changes
   useEffect(() => {
@@ -213,46 +224,47 @@ async function onSubmit(data: ExpenseFormData) {
 
   if (!mounted || !isOpen) return null
 
-  return (
+  return createPortal(
     <>
-      {/* <Toast toast={toast} onDismiss={dismiss} /> */}
-
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-[#2d3436]/30 backdrop-blur-sm z-50 animate-in fade-in duration-200"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none">
+      {/* Modal: bottom sheet on mobile, centered dialog from sm up */}
+      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6 pointer-events-none">
         <div
-          className="bg-white rounded-[2rem] shadow-[0_25px_80px_-20px_rgba(0,0,0,0.15)] w-full max-w-4xl pointer-events-auto animate-in zoom-in-95 slide-in-from-bottom-8 duration-300 overflow-hidden max-h-[92vh]"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Add expense"
+          className="pointer-events-auto flex w-full max-h-[94dvh] flex-col overflow-hidden rounded-t-[1.75rem] bg-white shadow-[0_25px_80px_-20px_rgba(0,0,0,0.15)] animate-in slide-in-from-bottom-8 duration-300 sm:max-h-[92dvh] sm:max-w-4xl sm:rounded-[2rem] sm:zoom-in-95"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Split layout: Header + Form side by side or top + 2-col */}
-          <div className="flex flex-col h-full max-h-[92vh]">
-            {/* Header — full width */}
-            <div className="flex items-center justify-between px-8 py-6 border-b border-gray-50">
-              <div>
-                <h2 className="text-xl font-bold text-[#2d3436]">Add Expense</h2>
-                <p className="text-sm text-gray-400 mt-1">
-                  {watchedPaidBy === "someone_else"
-                    ? "Record an expense paid by someone else"
-                    : "Record a new household expense"}
-                </p>
-              </div>
-              <button
-                onClick={onClose}
-                className="w-10 h-10 rounded-2xl bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X size={20} strokeWidth={1.5} />
-              </button>
+          {/* Header */}
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-50 px-5 py-4 sm:px-8 sm:py-6">
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-[#2d3436] sm:text-xl">Add Expense</h2>
+              <p className="mt-0.5 text-xs text-gray-400 sm:mt-1 sm:text-sm">
+                {watchedPaidBy === "someone_else"
+                  ? "Record an expense paid by someone else"
+                  : "Record a new household expense"}
+              </p>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gray-50 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            >
+              <X size={20} strokeWidth={1.5} />
+            </button>
+          </div>
 
-            {/* Form — 2 column layout */}
-            <div className="flex-1 overflow-y-auto">
-              <form onSubmit={handleSubmit(onSubmit)} className="p-8">
-                <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+          {/* Form: scrollable body + pinned submit footer */}
+          <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:p-8">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2 sm:gap-y-6">
                   {/* LEFT COLUMN */}
                   <div className="space-y-6">
                     {/* Amount — bigger */}
@@ -295,7 +307,7 @@ async function onSubmit(data: ExpenseFormData) {
                         maxLength={120}
                         placeholder="What did you spend on?"
                         {...register("description")}
-                        className={`w-full px-4 py-3.5 bg-gray-50 border-2 rounded-2xl text-sm font-medium text-[#2d3436] outline-none transition-all focus:bg-white focus:ring-4 ${
+                        className={`w-full px-4 py-3.5 bg-gray-50 border-2 rounded-2xl text-base sm:text-sm font-medium text-[#2d3436] outline-none transition-all focus:bg-white focus:ring-4 ${
                           errors.description
                             ? "border-red-400 bg-red-50/40 focus:border-red-500 focus:ring-red-500/10"
                             : "border-transparent focus:border-[#8b9dc3] focus:ring-[#8b9dc3]/10"
@@ -320,7 +332,7 @@ async function onSubmit(data: ExpenseFormData) {
                         ].map((option) => (
                           <label
                             key={option.value}
-                            className={`flex items-center gap-3 px-5 py-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                            className={`flex items-center gap-2.5 sm:gap-3 px-4 sm:px-5 py-3.5 sm:py-4 rounded-2xl border-2 cursor-pointer transition-all ${
                               watchedPaidBy === option.value
                                 ? option.value === "someone_else"
                                   ? "border-[#e17055] bg-[#e17055]/5 text-[#e17055]"
@@ -356,7 +368,7 @@ async function onSubmit(data: ExpenseFormData) {
                             type="text"
                             placeholder="e.g., Ali, Friend"
                             {...register("counterparty_name")}
-                            className="w-full pl-11 pr-4 py-3.5 bg-[#e17055]/5 border-2 border-[#e17055]/20 rounded-2xl text-sm font-medium text-[#2d3436] outline-none focus:ring-4 focus:ring-[#e17055]/10"
+                            className="w-full pl-11 pr-4 py-3.5 bg-[#e17055]/5 border-2 border-[#e17055]/20 rounded-2xl text-base sm:text-sm font-medium text-[#2d3436] outline-none focus:ring-4 focus:ring-[#e17055]/10"
                           />
                         </div>
                         {errors.counterparty_name && (
@@ -383,7 +395,7 @@ async function onSubmit(data: ExpenseFormData) {
                           {accountOptions.map((option) => (
                             <label
                               key={option.value}
-                              className={`flex items-center gap-4 px-5 py-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                              className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 sm:py-4 rounded-2xl border-2 cursor-pointer transition-all ${
                                 watchedPaymentAccount === option.value
                                   ? "border-[#8b9dc3] bg-[#8b9dc3]/5"
                                   : "border-gray-100 bg-white hover:border-gray-200"
@@ -452,13 +464,13 @@ async function onSubmit(data: ExpenseFormData) {
                                 handleCreateCategory()
                               }
                             }}
-                            className="flex-1 px-4 py-3 bg-[#8b9dc3]/5 border-2 border-[#8b9dc3]/20 rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-[#8b9dc3]/10"
+                            className="min-w-0 flex-1 px-4 py-3 bg-[#8b9dc3]/5 border-2 border-[#8b9dc3]/20 rounded-2xl text-base sm:text-sm font-medium outline-none focus:ring-4 focus:ring-[#8b9dc3]/10"
                           />
                           <button
                             type="button"
                             onClick={handleCreateCategory}
                             disabled={!newCategoryName.trim() || isPending}
-                            className="px-5 py-3 bg-[#8b9dc3] hover:bg-[#7a8bb2] disabled:bg-gray-200 text-white rounded-2xl text-sm font-semibold transition-colors"
+                            className="shrink-0 px-4 sm:px-5 py-3 bg-[#8b9dc3] hover:bg-[#7a8bb2] disabled:bg-gray-200 text-white rounded-2xl text-sm font-semibold transition-colors"
                           >
                             {isPending ? <Loader2 size={16} className="animate-spin" /> : "Add"}
                           </button>
@@ -468,35 +480,49 @@ async function onSubmit(data: ExpenseFormData) {
                               setIsAddingCategory(false)
                               setNewCategoryName("")
                             }}
-                            className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-2xl transition-colors"
+                            className="shrink-0 px-3.5 sm:px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-2xl transition-colors"
                           >
                             <X size={16} strokeWidth={1.5} />
                           </button>
                         </div>
                       ) : (
                         <div className="space-y-1.5">
-                          <div className="relative">
-                            <Tag size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <select
-                              {...register("category_id")}
-                              defaultValue=""
-                              className={`w-full pl-11 pr-10 py-3.5 bg-gray-50 border-2 rounded-2xl text-sm font-medium text-[#2d3436] outline-none focus:bg-white focus:ring-4 appearance-none transition-all ${
-                                errors.category_id
-                                  ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
-                                  : "border-transparent focus:border-[#8b9dc3] focus:ring-[#8b9dc3]/10"
-                              }`}
-                            >
-                              <option value="" disabled hidden>
-                                Choose a category
-                              </option>
-                              {categories.map((cat) => (
-                                <option key={cat.id} value={cat.id}>
-                                  {cat.name}
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                          </div>
+                       <div className="relative">
+                        <Tag
+                          size={16}
+                          className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
+                            watchedCategory ? "text-[#8b9dc3]" : "text-gray-400"
+                          }`}
+                        />
+                        <select
+                          {...register("category_id")}
+                          defaultValue=""
+                          className={`peer w-full pl-11 pr-10 py-3.5 border-2 rounded-2xl text-base sm:text-sm font-medium outline-none appearance-none transition-all focus:bg-white focus:ring-4 ${
+                            watchedCategory
+                              ? "bg-[#8b9dc3]/5 text-[#2d3436]"
+                              : "bg-gray-50 text-gray-400"
+                          } ${
+                            errors.category_id
+                              ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+                              : watchedCategory
+                              ? "border-[#8b9dc3]/30 focus:border-[#8b9dc3] focus:ring-[#8b9dc3]/10"
+                              : "border-transparent focus:border-[#8b9dc3] focus:ring-[#8b9dc3]/10"
+                          }`}
+                        >
+                          <option value="" disabled hidden>
+                            Choose a category
+                          </option>
+                          {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id} className="text-[#2d3436]">
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown
+                          size={16}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 peer-focus:rotate-180 peer-focus:text-[#8b9dc3]"
+                        />
+                      </div>
                           {errors.category_id && (
                             <p className="text-xs text-red-500 font-medium px-1">
                               {errors.category_id.message as string}
@@ -539,7 +565,7 @@ async function onSubmit(data: ExpenseFormData) {
                             {...register("notes")}
                             rows={3}
                             autoFocus
-                            className="w-full px-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl text-sm text-[#2d3436] outline-none focus:bg-white focus:border-[#8b9dc3] focus:ring-4 focus:ring-[#8b9dc3]/10 resize-none"
+                            className="w-full px-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl text-base sm:text-sm text-[#2d3436] outline-none focus:bg-white focus:border-[#8b9dc3] focus:ring-4 focus:ring-[#8b9dc3]/10 resize-none"
                           />
                           {errors.notes && (
                             <p className="text-red-500 text-xs font-medium">{errors.notes.message}</p>
@@ -549,35 +575,36 @@ async function onSubmit(data: ExpenseFormData) {
                     </div>
                   </div>
 
-                  {/* Submit — full width bottom */}
-                  <div className="col-span-2 pt-4 border-t border-gray-50">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting || isPending}
-                      className={`w-full py-4 rounded-2xl text-sm font-bold tracking-wide transition-all flex items-center justify-center gap-2 ${
-                        watchedPaidBy === "someone_else"
-                          ? "bg-[#e17055] hover:bg-[#d16045] text-white"
-                          : "bg-[#2d3436] hover:bg-[#1a1e1f] text-white"
-                      } disabled:bg-gray-300`}
-                    >
-                      {isSubmitting || isPending ? (
-                        <>
-                          <Loader2 size={18} className="animate-spin" />
-                          Recording...
-                        </>
-                      ) : watchedPaidBy === "someone_else" ? (
-                        "Record Payable Expense"
-                      ) : (
-                        "Record Expense"
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </form>
+              </div>
             </div>
-          </div>
+
+            {/* Submit: always visible, clear of the home indicator */}
+            <div className="shrink-0 border-t border-gray-100 bg-white px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-8 sm:pt-4 sm:pb-6">
+              <button
+                type="submit"
+                disabled={isSubmitting || isPending}
+                className={`flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold tracking-wide transition-all ${
+                  watchedPaidBy === "someone_else"
+                    ? "bg-[#e17055] hover:bg-[#d16045] text-white"
+                    : "bg-[#2d3436] hover:bg-[#1a1e1f] text-white"
+                } disabled:bg-gray-300`}
+              >
+                {isSubmitting || isPending ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Recording...
+                  </>
+                ) : watchedPaidBy === "someone_else" ? (
+                  "Record Payable Expense"
+                ) : (
+                  "Record Expense"
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   )
 }

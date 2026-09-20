@@ -48,7 +48,6 @@ const TRANSACTION_CHOICES = [
     iconColor: "text-[#534ab7]",
   },
 ]
-
 export default function ActionBar({
   householdId,
   currentCycleId,
@@ -132,30 +131,33 @@ export default function ActionBar({
           New transaction
         </button>
 
-        {/* ── MOBILE ONLY: Dropdown card below button ── */}
+        {/* ── MOBILE ONLY: Dropdown card below button (Extended wider & shifted left) ── */}
         <div
-          className={`sm:hidden absolute top-full right-0 mt-3.5 w-[calc(100vw-2.5rem)] max-w-sm z-50 transition-all duration-200 ease-out origin-top-right ${
+          className={`sm:hidden absolute top-full right-0 mt-3.5 w-[calc(100vw-1.5rem)] max-w-md z-50 transition-all duration-200 ease-out origin-top-right ${
             menuOpen
               ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
               : "opacity-0 -translate-y-2 scale-95 pointer-events-none"
           }`}
         >
-          {/* Upward Pointer Arrow matching the reference image */}
+          {/* Upward Pointer Arrow aligned with the trigger button on the right */}
           <div className="absolute right-6 -top-1.5 w-3.5 h-3.5 bg-white border-l border-t border-gray-100 rotate-45" />
 
           {/* White Card with Divided Columns */}
           <div className="relative bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-gray-100 p-1.5 grid grid-cols-3 divide-x divide-gray-100">
-            {TRANSACTION_CHOICES.map((choice) => {
+            { TRANSACTION_CHOICES.map((choice) => {
               const Icon = choice.icon
               return (
                 <button
                   key={choice.key}
                   type="button"
                   onClick={() => openModal(choice.key)}
-                  className="flex items-center justify-center gap-1.5 py-2.5 px-2 hover:bg-gray-50 active:bg-gray-100 rounded-xl transition-colors text-center"
+                  className="flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-1 hover:bg-gray-50 active:bg-gray-100 rounded-xl transition-colors text-center"
                 >
-                  <Icon size={14} strokeWidth={2} className="text-[#2d3436] shrink-0" />
-                  <span className="text-[11px] font-semibold text-[#2d3436] whitespace-nowrap">
+                  {/* Restored colored circle background badges for the icons */}
+                  <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${choice.iconBg}`}>
+                    <Icon size={13} strokeWidth={2} className={choice.iconColor} />
+                  </span>
+                  <span className="text-[11px] font-semibold text-[#2d3436] tracking-tight leading-tight">
                     {choice.label}
                   </span>
                 </button>

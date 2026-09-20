@@ -1,7 +1,6 @@
 // app/dashboard/layout.tsx
 
-import Link from "next/link"
-import Image from "next/image"
+
 import { Suspense } from "react"
 import SidebarNav from "@/app/dashboard/components/SidebarNav"
 import { ReactNode } from "react"
@@ -22,7 +21,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
      <aside className="hidden lg:flex w-56 bg-white flex-col fixed h-full border-r border-gray-100/50 z-40">
         {/* Logo */}
      <BrandLogo className="p-5 pb-3" />
-     
+
         {/* Nav + Logout (client component: needs usePathname + onClick) */}
         <SidebarNav />
       </aside>
