@@ -14,8 +14,8 @@ interface MonthlyCycleRow {
   month: number
   year: number
   opening_balance: number | null
-  opening_cash_balance: number | null
-  opening_bank_balance: number | null
+  opening_cash_balance?: number | null
+  opening_bank_balance?: number | null
   days_in_cycle: number | null
 }
 

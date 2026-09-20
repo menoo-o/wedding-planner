@@ -15,34 +15,15 @@ export default function DashboardSkeleton() {
   return (
     <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-6 lg:px-0 relative pt-2">
       {/* ── Top Bar & Right Controls ──────────────────────────── */}
-      <div className="flex items-center justify-between mb-6 sm:mb-8">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#2d3436]">Dashboard</h1>
-          <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
-            Welcome back to your household ledger
-          </p>
-        </div>
-
-        {/* Top Action Floating Rail */}
-        {/* <div className="flex items-center gap-3">
-          <div className="h-10 w-36 rounded-xl bg-[#2d3436] flex items-center justify-center text-white text-xs font-semibold shadow-sm opacity-90">
-            + New transaction
-          </div>
-
-          <div className="w-10 h-10 rounded-xl bg-white border border-gray-200/70 shadow-sm flex items-center justify-center text-gray-400">
-            <RefreshCw size={15} className="animate-spin text-gray-300" />
-          </div>
-
-          <div className="w-10 h-10 rounded-xl bg-white border border-gray-200/70 shadow-sm flex items-center justify-center text-gray-400">
-            <Bell size={18} strokeWidth={1.5} />
-          </div>
-
-          <div className="w-10 h-10 rounded-xl bg-[#dfe6e9] border border-gray-200/50 shadow-sm flex items-center justify-center text-[#636e72] font-bold text-sm">
-            U
-          </div>
-        </div> */}
+     <div className="flex items-center justify-between mb-6 sm:mb-8 min-h-[3rem]">
+      <div className="max-w-[58%] lg:max-w-none">
+        <h1 className="text-xl sm:text-2xl font-bold text-[#2d3436]">Dashboard</h1>
+        <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
+          Welcome back to your household ledger
+        </p>
       </div>
-
+    </div>
+      {/* Below this the skeleton is fine! */}
       {/* ── Financial Snapshot Header ─────────────────────────── */}
       <div className="mb-2">
         <h2 className="text-[11px] font-bold tracking-[0.15em] text-gray-400 uppercase mb-4">
