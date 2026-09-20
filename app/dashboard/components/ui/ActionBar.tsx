@@ -144,7 +144,7 @@ export default function ActionBar({
 
           {/* White Card with Divided Columns */}
           <div className="relative bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-gray-100 p-1.5 grid grid-cols-3 divide-x divide-gray-100">
-            { TRANSACTION_CHOICES.map((choice) => {
+            {  TRANSACTION_CHOICES.map((choice) => {
               const Icon = choice.icon
               return (
                 <button

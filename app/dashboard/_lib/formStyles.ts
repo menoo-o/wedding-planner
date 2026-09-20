@@ -28,8 +28,14 @@ export function optionCls(active: boolean) {
   }`
 }
 
-export const cancelBtnCls =
-  "flex-1 h-12 rounded-2xl bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-gray-700 font-semibold text-sm transition-colors"
+// Form layout inside <ModalShell>: scrolling body + pinned footer
+export const formShellCls = "flex min-h-0 flex-1 flex-col"
+
+export const formBodyCls =
+  "flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-8 sm:py-6"
+
+export const formFooterCls =
+  "shrink-0 border-t border-gray-100 bg-white px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-8 sm:pt-4 sm:pb-6"
 
 export const submitBtnCls =
-  "flex-[1.4] h-12 rounded-2xl bg-[#2d3436] hover:bg-[#1a1e1f] disabled:bg-gray-300 text-white font-bold text-sm tracking-wide transition-all flex items-center justify-center gap-2"
+  "w-full py-4 rounded-2xl bg-[#2d3436] hover:bg-[#1a1e1f] disabled:bg-gray-300 text-white font-bold text-sm tracking-wide transition-all flex items-center justify-center gap-2"

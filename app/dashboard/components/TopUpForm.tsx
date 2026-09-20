@@ -9,11 +9,6 @@ import { useRouter } from "next/navigation"
 import { Wallet, CreditCard, Info, Plus } from "lucide-react"
 import { TopUpFormSchema, TopUpFormData, TransactionInsertSchema } from "@/app/dashboard/_lib/topUpFormSchema"
 
-import {
-  labelCls, errorCls, inputCls, dateFixCls,
-  optionGridCls, optionCls, cancelBtnCls, submitBtnCls,
-} from "@/app/dashboard/_lib/formStyles"
-
 function getTodayString() {
   const today = new Date()
   return today.toISOString().split("T")[0]
@@ -143,44 +138,49 @@ export default function TopUpForm({
   const selectedAccount = watch("payment_account")
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <input type="hidden" {...register("household_id")} />
       <input type="hidden" {...register("cycle_id")} />
       <input type="hidden" {...register("created_by")} />
 
       {/* Date */}
-      <div className="space-y-2">
-        <label className={labelCls}>Date</label>
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1.5">Date</label>
         <input
           type="date"
           {...register("transaction_date")}
           suppressHydrationWarning
-          className={`${inputCls(!!errors.transaction_date)} ${dateFixCls}`}
+          className="w-full h-11 px-3.5 border border-gray-200 rounded-xl text-[15px] text-[#2d3436] outline-none focus:border-[#2d3436] focus:ring-[3px] focus:ring-black/[0.04] transition-all"
         />
-        {errors.transaction_date && <p className={errorCls}>{errors.transaction_date.message}</p>}
+        {errors.transaction_date && (
+          <p className="text-red-500 text-xs mt-1.5">{errors.transaction_date.message}</p>
+        )}
       </div>
 
       {/* Amount */}
-      <div className="space-y-2">
-        <label className={labelCls}>Amount</label>
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1.5">Amount</label>
         <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium text-gray-400 pointer-events-none">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[13px] font-medium text-gray-400 pointer-events-none">
             Rs
           </span>
           <input
             type="number"
-            inputMode="decimal"
             step="0.01"
             placeholder="0.00"
             autoFocus
             {...register("amount", { valueAsNumber: true })}
-            className={`${inputCls(!!errors.amount, "pl-14 pr-4", "h-14")} !text-xl font-bold tabular-nums`}
+            className={`w-full h-[52px] pl-11 pr-3.5 border rounded-xl text-[22px] font-medium tabular-nums outline-none transition-all ${
+              errors.amount
+                ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                : "border-gray-200 focus:border-[#2d3436] focus:ring-[3px] focus:ring-black/[0.04]"
+            }`}
           />
         </div>
         {errors.amount ? (
-          <p className={errorCls}>{errors.amount.message}</p>
+          <p className="text-red-500 text-xs mt-1.5">{errors.amount.message}</p>
         ) : (
-          <div className="flex items-center gap-1.5 px-1">
+          <div className="flex items-center gap-1.5 mt-1.5">
             <Info size={12} strokeWidth={1.8} className="text-gray-300 flex-shrink-0" />
             <span className="text-xs text-gray-400">Deposit must be greater than 0</span>
           </div>
@@ -188,51 +188,75 @@ export default function TopUpForm({
       </div>
 
       {/* Destination Account */}
-      <div className="space-y-2">
-        <label className={labelCls}>Destination account</label>
-        <div className={optionGridCls} role="radiogroup" aria-label="Destination account">
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1.5">
+          Destination account
+        </label>
+        <div className="flex gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
           <button
             type="button"
-            role="radio"
-            aria-checked={selectedAccount === "cash"}
             onClick={() => setValue("payment_account", "cash")}
-            className={optionCls(selectedAccount === "cash")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[13px] font-medium transition-all ${
+              selectedAccount === "cash"
+                ? "bg-white text-[#2d3436] shadow-sm"
+                : "text-gray-400 hover:text-gray-500"
+            }`}
           >
             <Wallet size={16} strokeWidth={1.8} />
             Cash wallet
           </button>
           <button
             type="button"
-            role="radio"
-            aria-checked={selectedAccount === "card"}
             onClick={() => setValue("payment_account", "card")}
-            className={optionCls(selectedAccount === "card")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[13px] font-medium transition-all ${
+              selectedAccount === "card"
+                ? "bg-white text-[#2d3436] shadow-sm"
+                : "text-gray-400 hover:text-gray-500"
+            }`}
           >
             <CreditCard size={16} strokeWidth={1.8} />
             Bank card
           </button>
         </div>
-        {errors.payment_account && <p className={errorCls}>{errors.payment_account.message}</p>}
+        {errors.payment_account && (
+          <p className="text-red-500 text-xs mt-1.5">{errors.payment_account.message}</p>
+        )}
       </div>
 
       {/* Description */}
-      <div className="space-y-2">
-        <label className={labelCls}>Source / description</label>
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1.5">
+          Source / description
+        </label>
         <input
           type="text"
           placeholder="e.g. Monthly salary, cash injection..."
           {...register("description")}
-          className={inputCls(!!errors.description)}
+          className={`w-full h-11 px-3.5 border rounded-xl text-[15px] outline-none transition-all ${
+            errors.description
+              ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+              : "border-gray-200 focus:border-[#2d3436] focus:ring-[3px] focus:ring-black/[0.04]"
+          }`}
         />
-        {errors.description && <p className={errorCls}>{errors.description.message}</p>}
+        {errors.description && (
+          <p className="text-red-500 text-xs mt-1.5">{errors.description.message}</p>
+        )}
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onSuccess} className={cancelBtnCls}>
+      <div className="flex gap-2.5 pt-2">
+        <button
+          type="button"
+          onClick={onSuccess}
+          className="flex-1 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 font-medium text-sm transition-all border border-gray-200"
+        >
           Cancel
         </button>
-        <button type="submit" disabled={isSubmitting} className={submitBtnCls}>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex-1 h-11 rounded-xl bg-[#2d3436] hover:opacity-90 disabled:opacity-40 text-white font-medium text-sm transition-all flex items-center justify-center gap-1.5"
+        >
           {isSubmitting ? (
             "Processing..."
           ) : (

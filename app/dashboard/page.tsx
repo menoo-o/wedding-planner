@@ -69,9 +69,6 @@ async function DashboardContent() {
       </div>
     </div>
 
-      {/* ── Action Bar ───────────────────────────────────────── */}
-    
-
       {/* ── Financial Snapshot ───────────────────────────────── */}
       {/* ... rest of your snapshot cards stay the same ... */}
       <div className="mb-2">

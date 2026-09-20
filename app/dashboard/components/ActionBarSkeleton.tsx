@@ -1,5 +1,7 @@
 // app/dashboard/components/ui/ActionBarSkeleton.tsx
 //this is for layout.tsx
+import BrandLogo from "./BrandLogo"
+
 export default function ActionBarSkeleton() {
   return (
     <div
@@ -13,7 +15,7 @@ export default function ActionBarSkeleton() {
       "
     >
       {/* Mobile only: logo placeholder, pushes the icons to the right */}
-      <div className="mr-auto h-10 w-32 rounded-xl bg-gray-100 lg:hidden" />
+       <BrandLogo className="mr-auto lg:hidden" />
 
       {/* Mobile: the "New transaction" button, on the title row's right edge.
           Desktop: first block inside the pill */}
