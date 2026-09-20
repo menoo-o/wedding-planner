@@ -51,7 +51,7 @@ export default async function DashboardHeaderBar() {
     <div className="hidden lg:block w-px h-6 bg-gray-200/70 mx-0.5" />
 
     {/* Refresh isn't in the mobile design; drop `hidden lg:block` to keep it */}
-    <div className="hidden lg:block">
+    <div className="w-6 h-6 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100/70 transition-all">
       <RefreshButton />
     </div>
 

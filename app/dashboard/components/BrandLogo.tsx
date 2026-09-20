@@ -16,7 +16,7 @@ export default function BrandLogo({ className = "" }: BrandLogoProps) {
             alt="Simply Finance"
             fill
             sizes="(max-width: 768px) 120px, 160px"
-            className="object-contain object-left scale-125 origin-left lg:object-center lg:scale-150 lg:origin-center transition-transform duration-300 group-hover:scale-160"
+            className="object-contain object-left scale-[1.5] origin-left lg:object-center lg:scale-150 lg:origin-center transition-transform duration-300 group-hover:scale-[1.8] lg:group-hover:scale-160"
             priority
           />
         </div>
