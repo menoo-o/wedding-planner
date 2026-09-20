@@ -10,7 +10,7 @@ export default function BrandLogo({ className = "" }: BrandLogoProps) {
   return (
     <div className={className}>
       <Link href="/dashboard" className="flex items-center gap-2 lg:gap-3 group">
-        <div className="relative w-20 h-12 lg:w-26 lg:h-18 overflow-visible shrink-0 flex items-center justify-center -ml-3 lg:ml-0">
+        <div className="relative w-20 h-12 lg:w-26 lg:h-18 overflow-visible shrink-0 flex items-center justify-center -ml-4 lg:ml-0">
           <Image
             src="/logo-v1.png"
             alt="Simply Finance"
