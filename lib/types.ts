@@ -26,7 +26,7 @@ export const initialLoginState: LoginState = {
 
 // ── Household ─────────────────────────────────────────────────
 export type HouseholdMember = {
-  household_id: string;
+  household_id: string | null ;
   role: "admin" | string;
   status: "active" | "inactive" | "pending" | string;
   user_id: string;

@@ -88,7 +88,7 @@ async function DashboardContent() {
           walletName={walletName}
           savingsBalance={savingsBalance}
           householdId={householdMember?.household_id}
-          currentCycleId={currentCycleId}
+          currentCycleId={currentCycleId ?? null}
           // createdBy={createdBy}
           // showToast={showToast}
         />

@@ -20,7 +20,7 @@ import { useState } from "react"
 import { Wallet, ArrowLeftRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import TransferModal from "./TransferModal"
-import Toast, { useToast } from "../Toast"
+// import Toast, { useToast } from "../Toast"
 
 interface LiquidityCardProps {
   cash: number
@@ -94,7 +94,7 @@ export default function LiquidityCard({
           onTransferSuccess?.()
           router.refresh()
         }}
-        householdId={householdId}
+        householdId={householdId ?? null}
         currentCycleId={currentCycleId}
         // createdBy={createdBy}
         cashBalance={cash}
