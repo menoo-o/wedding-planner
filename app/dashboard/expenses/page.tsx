@@ -324,32 +324,35 @@ const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
     </div>
   </div>
 
-    {/* ── Main Controls Bar ──────────────────────────────────────── */}
- {/* ── Main Controls Bar ──────────────────────────────────────── */}
-<div className="relative mt-11 mb-6 sm:mt-6">
+ <div className="rounded-xl border border-gray-200/70 bg-white p-0.5 sm:border-0 sm:bg-transparent sm:p-0 sm:rounded-none">
+    <div className="relative">
+      <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl overflow-x-auto no-scrollbar w-full sm:w-fit pr-12 sm:pr-14 scroll-pr-12">
+        {categoryTabs.map((tab) => {
+          const isActive = activeCategory === tab.id
+          return (
+            <Link
+              key={tab.id}
+              href={`/dashboard/expenses?${buildQueryString({ ...params, category: tab.id === "all" ? undefined : tab.id })}`}
+              scroll={false}
+              className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                isActive
+                  ? "bg-white text-[#2d3436] shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {tab.name}
+            </Link>
+          )
+        })}
+      </div>
 
-  {/* Row 1: Category Tabs — scrolls on mobile so it can't collide with the
-      filter button; unchanged from sm: up */}
-  <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-full sm:w-fit overflow-x-auto no-scrollbar pr-2 sm:pr-14">
-    {categoryTabs.map((tab) => {
-      const isActive = activeCategory === tab.id
-      return (
-        <Link
-          key={tab.id}
-          href={`/dashboard/expenses?${buildQueryString({ ...params, category: tab.id === "all" ? undefined : tab.id })}`}
-          scroll={false}
-          className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            isActive
-              ? "bg-white text-[#2d3436] shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          {tab.name}
-        </Link>
-      )
-    })}
-  </div>
-
+      {/* Fade so a partially-cut tab reads as "scroll for more", not as
+          clipped content sitting under the button. Mobile only. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute right-11 top-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-gray-100 sm:hidden"
+      />
+    </div>
 
         {/* Full-width filter bar — toggle absolutely positioned, panel below */}
         <ExpensesFilterBar
