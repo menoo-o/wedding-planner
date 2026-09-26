@@ -6,7 +6,6 @@ import Link from "next/link"
 
 
 import {
-  Wallet,
   TrendingDown,
   Scale,
   ChevronRight,
@@ -19,7 +18,7 @@ import { getPrevCycleExpenses, getCycleTransactions } from "../_db/transactions"
 // import { getTransactionsByType } from "../_db/transactions" ->> reusable query helper that fetches a paginated, sorted list
 import { getAllCycles } from '../_db/cycles'  
 // import { getHouseholdCategories } from "../_db/categories"
-
+import LiquidityCard from "@/app/dashboard/components/liquidity-widget/LiquidityCard"
 import ExpensesFilterBar from "../components/ExpensesFilterBar"
 import {getTopCategories} from '@/app/dashboard/_lib/utils'
 import { groupByDay } from '@/app/dashboard/_lib/utils'
@@ -73,7 +72,10 @@ async function ExpensesContent({
     categories,
     previousExpenses,
     rawTransactions,
+    liveTotal: total,
+    savingsBalance,
     payablesRecords,
+    walletName,
     receivablesRecords,
     liveCash: cash, liveCard: card, 
   } = await getDashboardData()
@@ -227,7 +229,7 @@ const velocityRatio = previousCycleExpenses > 0
   : 0
 
 const isBurningFaster = velocityRatio > 1
-const totalLiquidity = cash + card
+// const totalLiquidity = cash + card
 
 const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
 //parent / main expenses page
@@ -295,25 +297,16 @@ const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
     </div>
 
     {/* 3. Liquidity */}
-    <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-      <div>
-        <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400 mb-2 sm:mb-3">
-          <Wallet size={14} strokeWidth={1.5} className="shrink-0" />
-          <span className="text-[10px] font-bold tracking-[0.12em] sm:tracking-[0.15em] uppercase text-gray-400 truncate">
-            Liquidity
-          </span>
-        </div>
-        <p className="text-xl sm:text-2xl font-bold text-[#2d3436] tracking-tight">
-          Rs {totalLiquidity.toLocaleString()}
-        </p>
-      </div>
-      <div className="flex items-center gap-1.5 sm:gap-2 mt-2 text-[11px] sm:text-xs text-gray-400 truncate">
-        <span>Cash: {cash.toLocaleString()}</span>
-        <span>·</span>
-        <span>Card: {card.toLocaleString()}</span>
-      </div>
-    </div>
+     <LiquidityCard
+          cash={cash}
+          card={card}
+          total={total}
+          walletName={walletName}
+          savingsBalance={savingsBalance}
+          householdId={householdMember?.household_id}
+          currentCycleId={currentCycleId ?? null}
 
+        />
     {/* 4. Burn Rate */}
     <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
       <div>
@@ -331,30 +324,34 @@ const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
     </div>
   </div>
 
-  {/* ── Main Controls Bar: Horizontally scrollable on mobile ── */}
-  <div className="relative my-4 sm:my-6">
-    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-      <div className="flex items-center gap-1 p-1 bg-gray-100/90 rounded-xl shrink-0">
-        {categoryTabs.map((tab) => {
-          const isActive = activeCategory === tab.id
-          return (
-            <Link
-              key={tab.id}
-              href={`/dashboard/expenses?${buildQueryString({ ...params, category: tab.id === "all" ? undefined : tab.id })}`}
-              scroll={false}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
-                isActive
-                  ? "bg-white text-[#2d3436] shadow-sm font-semibold"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {tab.name}
-            </Link>
-          )
-        })}
-      </div>
+    {/* ── Main Controls Bar ──────────────────────────────────────── */}
+ {/* ── Main Controls Bar ──────────────────────────────────────── */}
+<div className="relative mt-11 mb-6 sm:mt-6">
 
-      <div className="shrink-0">
+  {/* Row 1: Category Tabs — scrolls on mobile so it can't collide with the
+      filter button; unchanged from sm: up */}
+  <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-full sm:w-fit overflow-x-auto no-scrollbar pr-2 sm:pr-14">
+    {categoryTabs.map((tab) => {
+      const isActive = activeCategory === tab.id
+      return (
+        <Link
+          key={tab.id}
+          href={`/dashboard/expenses?${buildQueryString({ ...params, category: tab.id === "all" ? undefined : tab.id })}`}
+          scroll={false}
+          className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            isActive
+              ? "bg-white text-[#2d3436] shadow-sm"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          {tab.name}
+        </Link>
+      )
+    })}
+  </div>
+
+
+        {/* Full-width filter bar — toggle absolutely positioned, panel below */}
         <ExpensesFilterBar
           cycles={cycles}
           categories={categories}
@@ -364,114 +361,110 @@ const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
           activeSort={sortOption}
           searchQuery={searchQuery || ""}
         />
+
       </div>
-    </div>
-  </div>
+  
+      {/* ── Expense List Grouped by Day ──────────────────────── */}
+      <div className="space-y-6">
+        {groupedExpenses.map((day) => (
+          <div key={day.date}>
+            {/* Date Header */}
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h3 className="text-sm font-semibold text-[#2d3436]">{day.label}</h3>
+              <span className="text-sm font-medium text-[#e17055]">
+                -Rs {day.dayTotal.toLocaleString()}
+              </span>
+            </div>
 
-  {/* ── Expense List Grouped by Day ──────────────────────── */}
-  <div className="space-y-5 sm:space-y-6">
-    {groupedExpenses.map((day) => (
-      <div key={day.date}>
-        {/* Date Header */}
-        <div className="flex items-center justify-between mb-2.5 px-1">
-          <h3 className="text-xs sm:text-sm font-semibold text-[#2d3436]">{day.label}</h3>
-          <span className="text-xs sm:text-sm font-semibold text-[#e17055]">
-            -Rs {day.dayTotal.toLocaleString()}
-          </span>
-        </div>
-
-        {/* Transaction Cards */}
-        <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-hidden">
-          {day.transactions.map((tx, i) => (
-            <div
-              key={tx.id}
-              className={`flex items-center justify-between p-3.5 sm:px-5 sm:py-4 ${
-                i !== day.transactions.length - 1 ? "border-b border-gray-50" : ""
-              } hover:bg-gray-50/50 transition-colors cursor-pointer group`}
-            >
-              {/* Left Side: Icon + Descriptions */}
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0 pr-2">
+            {/* Transaction Cards */}
+            <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-hidden">
+              {day.transactions.map((tx, i) => (
                 <div
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{
-                    background: `color-mix(in srgb, ${getCategoryColor(tx.category_name)} 15%, transparent)`,
-                    color: getCategoryColor(tx.category_name),
-                  }}
+                  key={tx.id}
+                  className={`flex items-center justify-between px-5 py-4 ${
+                    i !== day.transactions.length - 1 ? "border-b border-gray-50" : ""
+                  } hover:bg-gray-50/50 transition-colors cursor-pointer group`}
                 >
-                  {getCategoryIcon(tx.category_name)}
-                </div>
-
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-[#2d3436] truncate">
-                    {tx.description || tx.category_name}
-                  </p>
-                  <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 text-[10px] sm:text-xs text-gray-400 truncate">
-                    <span className="uppercase tracking-wider font-medium truncate">
-                      {tx.category_name}
-                    </span>
-                    <span>·</span>
-                    <span className="shrink-0">
-                      {new Date(tx.created_at).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}
-                    </span>
-                    <span>·</span>
-                    <span className="capitalize shrink-0">
-                      {tx.payment_account}
-                    </span>
-                    {tx.reimbursement_status === "pending" && (
-                      <>
-                        <span>·</span>
-                        <span className="font-medium px-1.5 py-0.2 rounded-full bg-amber-50 text-amber-600 shrink-0">
-                          Pending
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: `color-mix(in srgb, ${getCategoryColor(tx.category_name)} 15%, transparent)`,
+                        color: getCategoryColor(tx.category_name),
+                      }}
+                    >
+                      {getCategoryIcon(tx.category_name)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-[#2d3436]">
+                        {tx.description || tx.category_name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-gray-400 uppercase tracking-wider">
+                          {tx.category_name}
                         </span>
-                      </>
-                    )}
+                        <span className="text-gray-300">·</span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(tx.created_at).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}
+                        </span>
+                        <span className="text-gray-300">·</span>
+                        <span className="text-xs text-gray-400 capitalize">
+                          {tx.payment_account}
+                        </span>
+                        {tx.reimbursement_status === "pending" && (
+                          <>
+                            <span className="text-gray-300">·</span>
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+                              Pending
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-semibold text-[#2d3436] tabular-nums">
+                      -Rs {tx.amount.toLocaleString()}
+                    </span>
+                    <ChevronRight
+                      size={16}
+                      strokeWidth={1.5}
+                      className="text-gray-300 group-hover:text-gray-500 transition-colors"
+                    />
                   </div>
                 </div>
-              </div>
-
-              {/* Right Side: Amount + Chevron */}
-              <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                <span className="text-xs sm:text-sm font-bold text-[#2d3436] tabular-nums">
-                  -Rs {tx.amount.toLocaleString()}
-                </span>
-                <ChevronRight
-                  size={15}
-                  strokeWidth={1.5}
-                  className="text-gray-300 group-hover:text-gray-500 transition-colors"
-                />
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
-    ))}
+          </div>
+        ))}
 
-    {groupedExpenses.length === 0 && (
-      <div className="text-center py-16">
-        <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
-          <TrendingDown size={22} strokeWidth={1.5} className="text-gray-300" />
-        </div>
-        <p className="text-gray-400 text-xs sm:text-sm">
-          {activeCategory === "all" && !searchQuery
-            ? "No expenses recorded this cycle"
-            : "No expenses match your filters"}
-        </p>
-        {(activeCategory !== "all" || searchQuery) && (
-          <Link
-            href="/dashboard/expenses"
-            className="inline-block mt-3 text-xs sm:text-sm text-[#8b9dc3] hover:text-[#6c7a95] transition-colors"
-          >
-            Clear all filters
-          </Link>
+        {groupedExpenses.length === 0 && (
+          <div className="text-center py-16">
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <TrendingDown size={24} strokeWidth={1.5} className="text-gray-300" />
+            </div>
+            <p className="text-gray-400 text-sm">
+              {activeCategory === "all" && !searchQuery
+                ? "No expenses recorded this cycle"
+                : "No expenses match your filters"}
+            </p>
+            {(activeCategory !== "all" || searchQuery) && (
+              <Link
+                href="/dashboard/expenses"
+                className="inline-block mt-3 text-sm text-[#8b9dc3] hover:text-[#6c7a95] transition-colors"
+              >
+                Clear all filters
+              </Link>
+            )}
+          </div>
         )}
       </div>
-    )}
-  </div>
-</div>
+    </div>
   )
 }
 // ── Query String Builder ────────────────────────────────────

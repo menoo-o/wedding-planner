@@ -43,7 +43,7 @@ export default function DebtsFilterControls({
               : "text-gray-500 hover:text-gray-800"
           }`}
         >
-          You're Owed
+          You&apos;re Owed
         </button>
         <button
           type="button"

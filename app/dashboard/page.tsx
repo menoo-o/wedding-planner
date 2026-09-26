@@ -4,7 +4,6 @@ import { Suspense } from "react"
 import Link from "next/link"
 import {
   ChevronRight,
-  Wallet,
   TrendingDown,
   Scale,
   ArrowUpRight,

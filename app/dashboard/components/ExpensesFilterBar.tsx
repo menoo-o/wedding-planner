@@ -156,6 +156,8 @@ const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery)
     : "Current"
 
   const activeCatObj = categories.find((c) => c.id === activeCategory)
+  //app/dashboard/components/expensesfilterbar.tsx
+ //app/dashboard/components/expensesfilterbar.tsx
 return (
   <>
    <div className="relative">
