@@ -47,10 +47,10 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 ]
 
 const PAYMENT_OPTIONS: { value: PaymentSource; label: string; icon: ReactElement }[] = [
-  { value: "all", label: "All sources", icon: <SlidersHorizontal size={14} strokeWidth={1.5} /> },
+  { value: "all", label: "All", icon: <SlidersHorizontal size={14} strokeWidth={1.5} /> },
   { value: "cash", label: "Cash", icon: <Banknote size={14} strokeWidth={1.5} /> },
   { value: "card", label: "Card", icon: <CreditCard size={14} strokeWidth={1.5} /> },
-  { value: "someone_else", label: "Someone else", icon: <User size={14} strokeWidth={1.5} /> },
+  { value: "someone_else", label: "By Other", icon: <User size={14} strokeWidth={1.5} /> },
 ]
 
 interface ExpensesFilterBarProps {
