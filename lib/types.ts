@@ -146,6 +146,8 @@ export interface DashboardData {
   liveCard: number;
   liveTotal: number;
   liveMonthlyExpenses: number;
+  currentCycleId: string | null;
+  
 }
 
 // export type LoanStatus = "pending" | "partial" | "settled"

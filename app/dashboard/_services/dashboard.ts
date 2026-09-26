@@ -51,6 +51,7 @@ const EMPTY_DASHBOARD: DashboardData = {
   liveTotal: 0,
   liveMonthlyExpenses: 0,
   currentCycleId: null,
+
 };
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -167,5 +168,6 @@ export const getDashboardData = cache(async (): Promise<DashboardData> => {
     liveCard: liveLiquidity.card,
     liveTotal: liveLiquidity.total,
     liveMonthlyExpenses: liveLiquidity.monthlyExpenses,
+
   }
 })
