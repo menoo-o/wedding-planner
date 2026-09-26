@@ -402,31 +402,32 @@ const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
                       <p className="text-sm font-medium text-[#2d3436]">
                         {tx.description || tx.category_name}
                       </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-gray-400 uppercase tracking-wider">
-                          {tx.category_name}
-                        </span>
-                        <span className="text-gray-300">·</span>
-                        <span className="text-xs text-gray-400">
-                          {new Date(tx.created_at).toLocaleTimeString("en-US", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true,
-                          })}
-                        </span>
-                        <span className="text-gray-300">·</span>
-                        <span className="text-xs text-gray-400 capitalize">
-                          {tx.payment_account}
-                        </span>
-                        {tx.reimbursement_status === "pending" && (
-                          <>
-                            <span className="text-gray-300">·</span>
-                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
-                              Pending
-                            </span>
-                          </>
-                        )}
-                      </div>
+                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                  <span className="text-xs text-gray-400 uppercase tracking-wider truncate">
+                    {tx.category_name}
+                  </span>
+                  <span className="hidden sm:inline text-gray-300">·</span>
+                  <span className="hidden sm:inline text-xs text-gray-400">
+                    {new Date(tx.created_at).toLocaleTimeString("en-US", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}
+                  </span>
+                  <span className="text-gray-300">·</span>
+                  <span className="text-xs text-gray-400 capitalize">
+                    {tx.payment_account}
+                  </span>
+                  {tx.reimbursement_status === "pending" && (
+                    <>
+                      <span className="text-gray-300">·</span>
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+                        Pending
+                      </span>
+                    </>
+                  )}
+              </div>
+
                     </div>
                   </div>
 
