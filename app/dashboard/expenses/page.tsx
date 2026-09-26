@@ -31,27 +31,6 @@ import { MonthlyCycle } from "@/lib/types"
 
 // ── Helpers (exists in ../_lib/utils.ts) ───────────────────────────────────────────────────
 
-// ── Skeleton ──────────────────────────────────────────────────
-
-function ExpensesSkeleton() {
-  return (
-    <div className="p-8 animate-pulse">
-      <div className="h-4 bg-gray-200 rounded-lg w-48 mb-8" />
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-28 bg-gray-200 rounded-2xl" />
-        ))}
-      </div>
-      <div className="h-16 bg-gray-200 rounded-xl mb-4" />
-      <div className="space-y-3">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-16 bg-gray-200 rounded-xl" />
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // ── Main Page ─────────────────────────────────────────────────
 
 export default function ExpensesPage({
@@ -253,116 +232,129 @@ const totalLiquidity = cash + card
 const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
 //parent / main expenses page
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      {/* ── Top Bar ──────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-[#2d3436]">Expenses</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
-            {monthlyCycle?.created_at
-              ? new Date(monthlyCycle.created_at).toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                })
-              : "No active cycle"}
-          </p>
+ <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-6 lg:px-0">
+  {/* ── Top Bar ──────────────────────────────────────────── */}
+  <div className="flex items-center justify-between mb-4 sm:mb-8">
+    <div>
+      <h1 className="text-xl sm:text-2xl font-bold text-[#2d3436]">Expenses</h1>
+      <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
+        {monthlyCycle?.created_at
+          ? new Date(monthlyCycle.created_at).toLocaleDateString("en-US", {
+              month: "long",
+              year: "numeric",
+            })
+          : "No active cycle"}
+      </p>
+    </div>
+  </div>
+
+  {/* ── Stats Row: 2x2 on Mobile, 4 Cols on Desktop ──────── */}
+  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+    {/* 1. Total Spend */}
+    <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+      <div>
+        <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400 mb-2 sm:mb-3">
+          <TrendingDown size={14} strokeWidth={1.5} className="shrink-0" />
+          <span className="text-[10px] font-bold tracking-[0.12em] sm:tracking-[0.15em] uppercase text-gray-400 truncate">
+            Total spend
+          </span>
         </div>
-       
+        <p className="text-xl sm:text-2xl font-bold text-[#e17055] tracking-tight">
+          -Rs {selectedCycleExpenses.toLocaleString()}
+        </p>
+      </div>
+      <p className="text-[11px] sm:text-xs text-gray-400 mt-2 truncate">
+        {previousExpenses > 0 ? (
+          <span className={isBurningFaster ? "text-[#e17055]" : "text-[#00b894]"}>
+            {isBurningFaster ? "▲" : "▼"} {Math.abs((velocityRatio - 1) * 100).toFixed(1)}% vs last month
+          </span>
+        ) : (
+          "No prior data"
+        )}
+      </p>
+    </div>
+
+    {/* 2. Pending Payables */}
+    <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+      <div>
+        <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400 mb-2 sm:mb-3">
+          <Scale size={14} strokeWidth={1.5} className="shrink-0" />
+          <span className="text-[10px] font-bold tracking-[0.12em] sm:tracking-[0.15em] uppercase text-gray-400 truncate">
+            Pending payables
+          </span>
+        </div>
+        <p className="text-xl sm:text-2xl font-bold text-[#2d3436]">
+          {payablesRecords.length}
+        </p>
+      </div>
+      <div className="flex items-center gap-1.5 sm:gap-2 mt-2 text-[11px] sm:text-xs text-gray-400 truncate">
+        <span>{receivablesRecords.length} rec.</span>
+        <span>·</span>
+        <span>{payablesRecords.length} pay.</span>
+      </div>
+    </div>
+
+    {/* 3. Liquidity */}
+    <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+      <div>
+        <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400 mb-2 sm:mb-3">
+          <Wallet size={14} strokeWidth={1.5} className="shrink-0" />
+          <span className="text-[10px] font-bold tracking-[0.12em] sm:tracking-[0.15em] uppercase text-gray-400 truncate">
+            Liquidity
+          </span>
+        </div>
+        <p className="text-xl sm:text-2xl font-bold text-[#2d3436] tracking-tight">
+          Rs {totalLiquidity.toLocaleString()}
+        </p>
+      </div>
+      <div className="flex items-center gap-1.5 sm:gap-2 mt-2 text-[11px] sm:text-xs text-gray-400 truncate">
+        <span>Cash: {cash.toLocaleString()}</span>
+        <span>·</span>
+        <span>Card: {card.toLocaleString()}</span>
+      </div>
+    </div>
+
+    {/* 4. Burn Rate */}
+    <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+      <div>
+        <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400 mb-2 sm:mb-3">
+          <Clock size={14} strokeWidth={1.5} className="shrink-0" />
+          <span className="text-[10px] font-bold tracking-[0.12em] sm:tracking-[0.15em] uppercase text-gray-400 truncate">
+            Burn rate
+          </span>
+        </div>
+        <p className="text-xl sm:text-2xl font-bold text-[#2d3436] tracking-tight">
+          Rs {Math.round(selectedCycleExpenses / Math.max(daysInCycle, 1)).toLocaleString()}
+        </p>
+      </div>
+      <p className="text-[11px] sm:text-xs text-gray-400 mt-2 truncate">per day this cycle</p>
+    </div>
+  </div>
+
+  {/* ── Main Controls Bar: Horizontally scrollable on mobile ── */}
+  <div className="relative my-4 sm:my-6">
+    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex items-center gap-1 p-1 bg-gray-100/90 rounded-xl shrink-0">
+        {categoryTabs.map((tab) => {
+          const isActive = activeCategory === tab.id
+          return (
+            <Link
+              key={tab.id}
+              href={`/dashboard/expenses?${buildQueryString({ ...params, category: tab.id === "all" ? undefined : tab.id })}`}
+              scroll={false}
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+                isActive
+                  ? "bg-white text-[#2d3436] shadow-sm font-semibold"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {tab.name}
+            </Link>
+          )
+        })}
       </div>
 
-      
-
-      {/* ── Stats Row ────────────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        {/* Total Spend */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-gray-400 mb-3">
-            <TrendingDown size={14} strokeWidth={1.5} />
-            <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">Total spend</span>
-          </div>
-          <p className="text-2xl font-bold text-[#e17055]">
-            -Rs {selectedCycleExpenses.toLocaleString()}
-          </p>
-          <p className="text-xs text-gray-400 mt-2">
-            {previousExpenses > 0 ? (
-              <span className={isBurningFaster ? "text-[#e17055]" : "text-[#00b894]"}>
-                {isBurningFaster ? "▲" : "▼"} {Math.abs((velocityRatio - 1) * 100).toFixed(1)}% vs last month
-              </span>
-            ) : (
-              "No prior data"
-            )}
-          </p>
-        </div>
-
-        {/* Pending Payables */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-gray-400 mb-3">
-            <Scale size={14} strokeWidth={1.5} />
-            <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">Pending payables</span>
-          </div>
-          <p className="text-2xl font-bold text-[#2d3436]">{payablesRecords.length}</p>
-          <div className="flex gap-3 mt-2 text-xs text-gray-400">
-            <span>{receivablesRecords.length} receivable{receivablesRecords.length !== 1 ? "s" : ""}</span>
-            <span>·</span>
-            <span>{payablesRecords.length} payable{payablesRecords.length !== 1 ? "s" : ""}</span>
-          </div>
-        </div>
-
-        {/* Liquidity */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-gray-400 mb-3">
-            <Wallet size={14} strokeWidth={1.5} />
-            <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">Liquidity</span>
-          </div>
-          <p className="text-2xl font-bold text-[#2d3436]">Rs {totalLiquidity.toLocaleString()}</p>
-          <div className="flex gap-3 mt-2 text-xs text-gray-400">
-            <span>Cash: Rs {cash.toLocaleString()}</span>
-            <span>·</span>
-            <span>Card: Rs {card.toLocaleString()}</span>
-          </div>
-        </div>
-
-        {/* Burn Rate */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-gray-400 mb-3">
-            <Clock size={14} strokeWidth={1.5} />
-            <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">Burn rate</span>
-          </div>
-          <p className="text-2xl font-bold text-[#2d3436]">
-            Rs {Math.round(selectedCycleExpenses / Math.max(daysInCycle, 1)).toLocaleString()}
-          </p>
-          <p className="text-xs text-gray-400 mt-2">per day this cycle</p>
-        </div>
-
-      </div>
-
-     
-
-      {/* ── Main Controls Bar ──────────────────────────────────────── */}
-      <div className="relative mt-6 mb-6">
-        
-        {/* Row 1: Category Tabs (leave space on right for toggle) */}
-        <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-fit pr-14">
-          {categoryTabs.map((tab) => {
-            const isActive = activeCategory === tab.id
-            return (
-              <Link
-                key={tab.id}
-                href={`/dashboard/expenses?${buildQueryString({ ...params, category: tab.id === "all" ? undefined : tab.id })}`}
-                scroll={false}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? "bg-white text-[#2d3436] shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                {tab.name}
-              </Link>
-            )
-          })}
-        </div>
-
-        {/* Full-width filter bar — toggle absolutely positioned, panel below */}
+      <div className="shrink-0">
         <ExpensesFilterBar
           cycles={cycles}
           categories={categories}
@@ -372,110 +364,114 @@ const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
           activeSort={sortOption}
           searchQuery={searchQuery || ""}
         />
-
-      </div>
-  
-      {/* ── Expense List Grouped by Day ──────────────────────── */}
-      <div className="space-y-6">
-        {groupedExpenses.map((day) => (
-          <div key={day.date}>
-            {/* Date Header */}
-            <div className="flex items-center justify-between mb-3 px-1">
-              <h3 className="text-sm font-semibold text-[#2d3436]">{day.label}</h3>
-              <span className="text-sm font-medium text-[#e17055]">
-                -Rs {day.dayTotal.toLocaleString()}
-              </span>
-            </div>
-
-            {/* Transaction Cards */}
-            <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-hidden">
-              {day.transactions.map((tx, i) => (
-                <div
-                  key={tx.id}
-                  className={`flex items-center justify-between px-5 py-4 ${
-                    i !== day.transactions.length - 1 ? "border-b border-gray-50" : ""
-                  } hover:bg-gray-50/50 transition-colors cursor-pointer group`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: `color-mix(in srgb, ${getCategoryColor(tx.category_name)} 15%, transparent)`,
-                        color: getCategoryColor(tx.category_name),
-                      }}
-                    >
-                      {getCategoryIcon(tx.category_name)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-[#2d3436]">
-                        {tx.description || tx.category_name}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-gray-400 uppercase tracking-wider">
-                          {tx.category_name}
-                        </span>
-                        <span className="text-gray-300">·</span>
-                        <span className="text-xs text-gray-400">
-                          {new Date(tx.created_at).toLocaleTimeString("en-US", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true,
-                          })}
-                        </span>
-                        <span className="text-gray-300">·</span>
-                        <span className="text-xs text-gray-400 capitalize">
-                          {tx.payment_account}
-                        </span>
-                        {tx.reimbursement_status === "pending" && (
-                          <>
-                            <span className="text-gray-300">·</span>
-                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
-                              Pending
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-semibold text-[#2d3436] tabular-nums">
-                      -Rs {tx.amount.toLocaleString()}
-                    </span>
-                    <ChevronRight
-                      size={16}
-                      strokeWidth={1.5}
-                      className="text-gray-300 group-hover:text-gray-500 transition-colors"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-
-        {groupedExpenses.length === 0 && (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-              <TrendingDown size={24} strokeWidth={1.5} className="text-gray-300" />
-            </div>
-            <p className="text-gray-400 text-sm">
-              {activeCategory === "all" && !searchQuery
-                ? "No expenses recorded this cycle"
-                : "No expenses match your filters"}
-            </p>
-            {(activeCategory !== "all" || searchQuery) && (
-              <Link
-                href="/dashboard/expenses"
-                className="inline-block mt-3 text-sm text-[#8b9dc3] hover:text-[#6c7a95] transition-colors"
-              >
-                Clear all filters
-              </Link>
-            )}
-          </div>
-        )}
       </div>
     </div>
+  </div>
+
+  {/* ── Expense List Grouped by Day ──────────────────────── */}
+  <div className="space-y-5 sm:space-y-6">
+    {groupedExpenses.map((day) => (
+      <div key={day.date}>
+        {/* Date Header */}
+        <div className="flex items-center justify-between mb-2.5 px-1">
+          <h3 className="text-xs sm:text-sm font-semibold text-[#2d3436]">{day.label}</h3>
+          <span className="text-xs sm:text-sm font-semibold text-[#e17055]">
+            -Rs {day.dayTotal.toLocaleString()}
+          </span>
+        </div>
+
+        {/* Transaction Cards */}
+        <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-hidden">
+          {day.transactions.map((tx, i) => (
+            <div
+              key={tx.id}
+              className={`flex items-center justify-between p-3.5 sm:px-5 sm:py-4 ${
+                i !== day.transactions.length - 1 ? "border-b border-gray-50" : ""
+              } hover:bg-gray-50/50 transition-colors cursor-pointer group`}
+            >
+              {/* Left Side: Icon + Descriptions */}
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0 pr-2">
+                <div
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{
+                    background: `color-mix(in srgb, ${getCategoryColor(tx.category_name)} 15%, transparent)`,
+                    color: getCategoryColor(tx.category_name),
+                  }}
+                >
+                  {getCategoryIcon(tx.category_name)}
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-[#2d3436] truncate">
+                    {tx.description || tx.category_name}
+                  </p>
+                  <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 text-[10px] sm:text-xs text-gray-400 truncate">
+                    <span className="uppercase tracking-wider font-medium truncate">
+                      {tx.category_name}
+                    </span>
+                    <span>·</span>
+                    <span className="shrink-0">
+                      {new Date(tx.created_at).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </span>
+                    <span>·</span>
+                    <span className="capitalize shrink-0">
+                      {tx.payment_account}
+                    </span>
+                    {tx.reimbursement_status === "pending" && (
+                      <>
+                        <span>·</span>
+                        <span className="font-medium px-1.5 py-0.2 rounded-full bg-amber-50 text-amber-600 shrink-0">
+                          Pending
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side: Amount + Chevron */}
+              <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                <span className="text-xs sm:text-sm font-bold text-[#2d3436] tabular-nums">
+                  -Rs {tx.amount.toLocaleString()}
+                </span>
+                <ChevronRight
+                  size={15}
+                  strokeWidth={1.5}
+                  className="text-gray-300 group-hover:text-gray-500 transition-colors"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ))}
+
+    {groupedExpenses.length === 0 && (
+      <div className="text-center py-16">
+        <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+          <TrendingDown size={22} strokeWidth={1.5} className="text-gray-300" />
+        </div>
+        <p className="text-gray-400 text-xs sm:text-sm">
+          {activeCategory === "all" && !searchQuery
+            ? "No expenses recorded this cycle"
+            : "No expenses match your filters"}
+        </p>
+        {(activeCategory !== "all" || searchQuery) && (
+          <Link
+            href="/dashboard/expenses"
+            className="inline-block mt-3 text-xs sm:text-sm text-[#8b9dc3] hover:text-[#6c7a95] transition-colors"
+          >
+            Clear all filters
+          </Link>
+        )}
+      </div>
+    )}
+  </div>
+</div>
   )
 }
 // ── Query String Builder ────────────────────────────────────
@@ -551,5 +547,28 @@ function getCategoryIcon(categoryName: string = "General") {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>
     </svg>
+  )
+}
+
+
+// ── Skeleton ──────────────────────────────────────────────────
+
+
+function ExpensesSkeleton() {
+  return (
+    <div className="p-8 animate-pulse">
+      <div className="h-4 bg-gray-200 rounded-lg w-48 mb-8" />
+      <div className="grid grid-cols-4 gap-4 mb-8">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-28 bg-gray-200 rounded-2xl" />
+        ))}
+      </div>
+      <div className="h-16 bg-gray-200 rounded-xl mb-4" />
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-16 bg-gray-200 rounded-xl" />
+        ))}
+      </div>
+    </div>
   )
 }

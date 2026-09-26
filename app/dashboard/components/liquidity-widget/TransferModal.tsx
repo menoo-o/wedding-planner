@@ -1,44 +1,59 @@
 "use client"
 "use no memo"
 
+// app/dashboard/components/TransferModal.tsx
 import { useForm } from "react-hook-form"
 import { createClient } from "@/utils/supabase/client"
 import { useState } from "react"
+import { ArrowRight, ArrowLeftRight, Wallet, CreditCard, PiggyBank, Lightbulb } from "lucide-react"
+import ModalShell from "@/app/dashboard/components/ModalShell"
+import {
+  labelCls, errorCls, inputCls,
+  formShellCls, formBodyCls, formFooterCls, submitBtnCls,
+} from "@/app/dashboard/_lib/formStyles"
+
+type AccountKey = "cash" | "card" | "vault"
 
 type TransferFormData = {
   amount: number
-  source_wallet: "cash" | "card"
+  from_account: AccountKey
+  to_account: AccountKey
   description: string
-  // 💡 Added tracks for Savings Lockbox routing
-  is_savings_transfer: boolean
-  savings_direction: "in" | "out"
 }
 
 interface TransferModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
-  householdId: string
-  currentCycleId: string
-  createdBy?: string
+  householdId: string | null
+  currentCycleId: string | null
   cashBalance: number
   cardBalance: number
-  // 💼 Added Props to bind your custom wallet context dynamically
   walletName: string | null
   savingsBalance: number
 }
 
-export default function TransferModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
-  householdId, 
-  currentCycleId, 
-  createdBy, 
-  cashBalance, 
+function accountMeta(key: AccountKey, walletName: string | null) {
+  switch (key) {
+    case "cash":
+      return { label: "Cash wallet", sub: "House Cash", Icon: Wallet, iconBg: "bg-[#00b894]/10", iconColor: "text-[#00b894]" }
+    case "card":
+      return { label: "Bank card", sub: "Primary card", Icon: CreditCard, iconBg: "bg-[#8b9dc3]/15", iconColor: "text-[#8b9dc3]" }
+    case "vault":
+      return { label: walletName || "Savings Wallet", sub: "Locked vault", Icon: PiggyBank, iconBg: "bg-[#2d3436]/10", iconColor: "text-[#2d3436]" }
+  }
+}
+
+export default function TransferModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  householdId,
+  currentCycleId,
+  cashBalance,
   cardBalance,
   walletName,
-  savingsBalance
+  savingsBalance,
 }: TransferModalProps) {
   const supabase = createClient()
   const [writeError, setWriteError] = useState<string | null>(null)
@@ -47,41 +62,58 @@ export default function TransferModal({
     register,
     handleSubmit,
     watch,
+    setValue,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<TransferFormData>({
     mode: "onChange",
     defaultValues: {
       amount: undefined,
-      source_wallet: "cash",
+      from_account: "cash",
+      to_account: "card",
       description: "",
-      is_savings_transfer: false,
-      savings_direction: "in",
-    }
+    },
   })
 
-  // Watch control states to dynamically render bounds
-  const fromWallet = watch("source_wallet")
-  const isSavingsTransfer = watch("is_savings_transfer")
-  const savingsDirection = watch("savings_direction")
+  const fromAccount = watch("from_account")
+  const toAccount = watch("to_account")
+  const description = watch("description") || ""
 
-  // 1. Core Target Definition Switch
-  const toWallet = fromWallet === "cash" ? "card" : "cash"
+  const options: AccountKey[] = walletName ? ["cash", "card", "vault"] : ["cash", "card"]
+
+  const balanceOf = (key: AccountKey) =>
+    key === "cash" ? cashBalance : key === "card" ? cardBalance : savingsBalance
+
+  const availableCeiling = balanceOf(fromAccount)
   const activeWalletName = walletName || "Savings Wallet"
+  const involvesVault = fromAccount === "vault" || toAccount === "vault"
 
-  // 2. Dynamic Live Balance Overdraft Ceiling Check Rule
-  let availableCeiling = fromWallet === "cash" ? cashBalance : cardBalance
-  if (isSavingsTransfer && savingsDirection === "out") {
-    availableCeiling = savingsBalance
+  function pickFrom(key: AccountKey) {
+    setValue("from_account", key)
+    if (key === toAccount) {
+      // Swap instead of leaving both sides pointing at the same account
+      setValue("to_account", fromAccount)
+    }
+  }
+
+  function pickTo(key: AccountKey) {
+    setValue("to_account", key)
+    if (key === fromAccount) {
+      setValue("from_account", toAccount)
+    }
   }
 
   if (!isOpen) return null
 
   async function onSubmit(data: TransferFormData) {
     setWriteError(null)
-    
-    if (!householdId || !currentCycleId || !createdBy) {
+
+    if (!householdId || !currentCycleId) {
       setWriteError("Missing structural ledger references. Please reload.")
+      return
+    }
+    if (data.from_account === data.to_account) {
+      setWriteError("Choose two different accounts to transfer between.")
       return
     }
 
@@ -89,8 +121,10 @@ export default function TransferModal({
     const customReason = data.description.trim() || "Internal vault fund allocation"
     let batchPayload: any[] = []
 
-    if (data.is_savings_transfer) {
-      // Fetch fresh balances to check concurrent state
+    if (involvesVault) {
+      const vaultIsSource = data.from_account === "vault"
+      const spendingLeg = (vaultIsSource ? data.to_account : data.from_account) as "cash" | "card"
+
       const { data: currentHousehold, error: fetchError } = await supabase
         .from("households")
         .select("savings_balance")
@@ -105,26 +139,8 @@ export default function TransferModal({
       const currentSavingsPool = Number(currentHousehold.savings_balance || 0)
       let targetSavingsBalance = currentSavingsPool
 
-      if (data.savings_direction === "in") {
-        // Cash/Card ➡️ Savings Vault
-        targetSavingsBalance += data.amount
-        batchPayload = [
-          {
-            household_id: householdId,
-            cycle_id: currentCycleId,
-            created_by: createdBy,
-            transaction_type: "transfer",       
-            payment_account: data.source_wallet,
-            amount: data.amount,
-            description: `Transfer out to ${activeWalletName.toUpperCase()}`,
-            notes: customReason,
-            created_at: nowStr,
-            paid_by: "household",
-            category_id: null,
-          }
-        ]
-      } else {
-        // Savings Vault ➡️ Cash/Card
+      if (vaultIsSource) {
+        // Emergency Fund → Cash/Card
         if (currentSavingsPool < data.amount) {
           setWriteError(`Insufficient vault balance! Available: Rs. ${currentSavingsPool}`)
           return
@@ -134,20 +150,35 @@ export default function TransferModal({
           {
             household_id: householdId,
             cycle_id: currentCycleId,
-            created_by: createdBy,
-            transaction_type: "transfer",       
-            payment_account: data.source_wallet, // Received back into cash or card account
+            transaction_type: "transfer",
+            payment_account: spendingLeg,
             amount: data.amount,
             description: `Transfer in from ${activeWalletName.toUpperCase()}`,
             notes: customReason,
             created_at: nowStr,
             paid_by: "household",
             category_id: null,
-          }
+          },
+        ]
+      } else {
+        // Cash/Card → Emergency Fund
+        targetSavingsBalance += data.amount
+        batchPayload = [
+          {
+            household_id: householdId,
+            cycle_id: currentCycleId,
+            transaction_type: "transfer",
+            payment_account: spendingLeg,
+            amount: data.amount,
+            description: `Transfer out to ${activeWalletName.toUpperCase()}`,
+            notes: customReason,
+            created_at: nowStr,
+            paid_by: "household",
+            category_id: null,
+          },
         ]
       }
 
-      // Step A: Update dynamic vault balance pool
       const { error: householdUpdateError } = await supabase
         .from("households")
         .update({ savings_balance: targetSavingsBalance })
@@ -157,18 +188,16 @@ export default function TransferModal({
         setWriteError(`Failed to process vault update: ${householdUpdateError.message}`)
         return
       }
-
     } else {
-      // Legacy Standard Transfer Flow (Cash ➡️ Card or vice versa)
+      // Cash ↔ Card
       batchPayload = [
         {
           household_id: householdId,
           cycle_id: currentCycleId,
-          created_by: createdBy,
-          transaction_type: "transfer",       
-          payment_account: data.source_wallet,
+          transaction_type: "transfer",
+          payment_account: data.from_account,
           amount: data.amount,
-          description: `Transfer out to ${toWallet.toUpperCase()}`,
+          description: `Transfer out to ${data.to_account.toUpperCase()}`,
           notes: customReason,
           created_at: nowStr,
           paid_by: "household",
@@ -177,24 +206,19 @@ export default function TransferModal({
         {
           household_id: householdId,
           cycle_id: currentCycleId,
-          created_by: createdBy,
-          transaction_type: "transfer",       
-          payment_account: toWallet,
+          transaction_type: "transfer",
+          payment_account: data.to_account,
           amount: data.amount,
-          description: `Transfer in from ${data.source_wallet.toUpperCase()}`,
+          description: `Transfer in from ${data.from_account.toUpperCase()}`,
           notes: customReason,
           created_at: nowStr,
           paid_by: "household",
           category_id: null,
-        }
+        },
       ]
     }
 
-    // Step B: Write matching ledger batch
-    const { error: txError } = await supabase
-      .from("transactions")
-      .insert(batchPayload)
-
+    const { error: txError } = await supabase.from("transactions").insert(batchPayload)
     if (txError) {
       setWriteError(txError.message)
       return
@@ -204,157 +228,215 @@ export default function TransferModal({
     onClose()
     onSuccess()
   }
- 
+
+  const fromMeta = accountMeta(fromAccount, walletName)
+  const toMeta = accountMeta(toAccount, walletName)
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fadeIn">
-      <div className="bg-white rounded-xl max-w-sm w-full shadow-2xl p-5 relative border border-gray-100">
-        
-        <button type="button" onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-sm">✕</button>
+    <ModalShell
+      title="Move Vault Funds"
+      subtitle="Shift liquidity balances internally across household layers."
+      onClose={onClose}
+      size="xl"
+      icon={<ArrowLeftRight size={20} strokeWidth={1.8} className="text-[#8b9dc3]" />}
+    >
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <form onSubmit={handleSubmit(onSubmit)} className={`${formShellCls} lg:w-[58%]`}>
+          <div className={`${formBodyCls} space-y-4`}>
+            {writeError && (
+              <div className="p-3 bg-red-50 text-red-600 text-xs rounded-2xl border border-red-100 font-medium">
+                {writeError}
+              </div>
+            )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <h3 className="text-base font-bold text-gray-900">Move Vault Funds</h3>
-            <p className="text-xs text-gray-500">Shifts liquidity balances internally across household layers.</p>
-          </div>
-
-          {writeError && (
-            <div className="p-2.5 bg-red-50 text-red-700 text-xs rounded-lg font-medium border border-red-100">
-              Database Error: {writeError}
-            </div>
-          )}
-
-          {/* Optional Vault Mode Switch Controller: Only appears if custom wallet configured */}
-          {walletName && (
-            <div className="bg-slate-50 border border-slate-100 p-2.5 rounded-xl flex items-center justify-between">
+            {/* From / To — each side picks independently from every account,
+                including the vault, so pulling vault → card no longer needs
+                a round trip through "Internal Transfer". */}
+            <div className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-slate-800 block">Target Locked Vault</label>
-                <p className="text-[10px] text-slate-500">Route interactions to {walletName}</p>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className={labelCls}>From</label>
+                  <span className="text-[11px] font-medium text-gray-400">
+                    Rs {balanceOf(fromAccount).toLocaleString()} available
+                  </span>
+                </div>
+                <AccountPills options={options} active={fromAccount} onPick={pickFrom} walletName={walletName} />
+              </div>
+
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const f = fromAccount
+                    setValue("from_account", toAccount)
+                    setValue("to_account", f)
+                  }}
+                  aria-label="Swap from and to"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 transition-colors hover:border-[#8b9dc3] hover:text-[#8b9dc3]"
+                >
+                  <ArrowLeftRight size={13} strokeWidth={2} className="rotate-90" />
+                </button>
+              </div>
+
+              <div>
+                <label className={`${labelCls} mb-1.5 block`}>To</label>
+                <AccountPills options={options} active={toAccount} onPick={pickTo} walletName={walletName} />
+              </div>
+            </div>
+
+            {/* Amount */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <label className={labelCls}>Amount</label>
+                <span className="text-[11px] font-medium text-gray-400 text-right">
+                  Available: Rs {availableCeiling.toLocaleString()}
+                </span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-medium text-gray-400 pointer-events-none">
+                  Rs
+                </span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  placeholder="0.00"
+                  {...register("amount", {
+                    required: "Please enter a valid transfer amount",
+                    valueAsNumber: true,
+                    validate: {
+                      positive: (v) => v > 0 || "Amount must be greater than zero",
+                      insufficient: (v) =>
+                        v <= availableCeiling ||
+                        `No funds! You only have Rs ${availableCeiling.toLocaleString()} available.`,
+                    },
+                  })}
+                  className={`${inputCls(!!errors.amount, "pl-12 pr-4", "h-12")} !text-lg font-bold tabular-nums`}
+                />
+              </div>
+              {errors.amount && <p className={errorCls}>{errors.amount.message}</p>}
+            </div>
+
+            {/* Flow strip: quick visual confirmation of the selected legs */}
+            <div className="flex items-center justify-between rounded-2xl border-2 border-transparent bg-gray-50 px-4 py-3 text-xs font-bold uppercase tracking-wide">
+              <span className="text-[#e17055] truncate">{fromMeta.label}</span>
+              <ArrowRight size={14} className="mx-2 shrink-0 text-gray-300" />
+              <span className="text-[#00b894] truncate">{toMeta.label}</span>
+            </div>
+
+            {/* Memo */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <label className={labelCls}>Memo / reason (optional)</label>
+                <span className="text-[11px] text-gray-300">{description.length}/100</span>
               </div>
               <input
-                type="checkbox"
-                {...register("is_savings_transfer")}
-                className="w-4 h-4 accent-emerald-600 rounded"
+                type="text"
+                placeholder="e.g. Savings allocation, emergency backup"
+                maxLength={100}
+                {...register("description")}
+                className={inputCls(false, "px-4", "h-11")}
               />
             </div>
-          )}
-
-          {/* Amount Box with dynamic error highlights */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="block text-xs font-semibold text-gray-600">Amount to Transfer *</label>
-              <span className="text-[11px] font-medium text-gray-400">
-                Max: Rs. {availableCeiling.toLocaleString()}
-              </span>
-            </div>
-            <input
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              {...register("amount", { 
-                required: "Please enter a valid transfer amount", 
-                valueAsNumber: true, 
-                validate: {
-                  positive: (v) => v > 0 || "Amount must be greater than zero",
-                  insufficient: (v) => v <= availableCeiling || `Error: No funds! You only have Rs. ${availableCeiling} available.`
-                }
-              })}
-              className={`w-full border p-2 rounded-lg text-base font-medium outline-none transition-all focus:ring-2 ${
-                errors.amount 
-                  ? "border-red-500 bg-red-50 text-red-900 focus:ring-red-200" 
-                  : "border-gray-300 bg-white text-gray-900 focus:ring-gray-900"
-              }`}
-            />
-            {errors.amount && (
-              <p className="text-red-600 text-xs font-medium mt-1.5 flex items-center gap-1">
-                ⚠️ {errors.amount.message}
-              </p>
-            )}
           </div>
 
-          {/* Direction Flow Visualizer Panel */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Direction Flow</label>
-            
-            {isSavingsTransfer ? (
-              /* Savings Router Display Engine */
-              <div className="space-y-3 p-2.5 border border-emerald-100 bg-emerald-50/20 rounded-xl">
-                <div className="flex items-center justify-between text-xs font-bold text-gray-800">
-                  {savingsDirection === "in" ? (
-                    <>
-                      <span className="uppercase text-red-600">{fromWallet}</span>
-                      <span className="text-gray-400 font-normal">➔ ➔ ➔</span>
-                      <span className="uppercase text-emerald-600">{activeWalletName}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="uppercase text-emerald-600">{activeWalletName}</span>
-                      <span className="text-gray-400 font-normal">➔ ➔ ➔</span>
-                      <span className="uppercase text-green-600">{fromWallet}</span>
-                    </>
-                  )}
-                </div>
-
-                <div className="flex gap-4 border-t border-emerald-100/60 pt-2 justify-center">
-                  <label className="text-[11px] flex items-center cursor-pointer text-slate-700 font-bold select-none">
-                    <input type="radio" value="in" {...register("savings_direction")} className="mr-1 accent-emerald-600" /> Stash Money In
-                  </label>
-                  <label className="text-[11px] flex items-center cursor-pointer text-slate-700 font-bold select-none">
-                    <input type="radio" value="out" {...register("savings_direction")} className="mr-1 accent-emerald-600" /> Pull Money Out
-                  </label>
-                </div>
-              </div>
-            ) : (
-              /* Legacy Standard Transfer Flow Display Engine */
-              <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-xs font-bold text-gray-800">
-                <span className="uppercase text-red-600">{fromWallet} (Source)</span>
-                <span className="text-gray-400 font-normal">➔ ➔ ➔</span>
-                <span className="uppercase text-green-600">{toWallet} (Target)</span>
-              </div>
-            )}
-            
-            {/* Base Spending Account Origin Selectors */}
-            <div className="flex gap-4 mt-2 px-1 justify-center">
-              <label className="text-xs flex items-center cursor-pointer text-gray-500 font-medium select-none">
-                <input type="radio" value="cash" {...register("source_wallet")} className="mr-1.5 accent-gray-900" /> {isSavingsTransfer ? "Interact with Cash" : "Cash to Card"}
-              </label>
-              <label className="text-xs flex items-center cursor-pointer text-gray-500 font-medium select-none">
-                <input type="radio" value="card" {...register("source_wallet")} className="mr-1.5 accent-gray-900" /> {isSavingsTransfer ? "Interact with Card" : "Card to Cash"}
-              </label>
-            </div>
-          </div>
-
-          {/* Notes description text field */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Memo / Reason (Optional)</label>
-            <input
-              type="text"
-              placeholder="e.g., Savings allocation, emergency backup"
-              {...register("description")}
-              className="w-full border border-gray-300 p-2 rounded-lg text-xs outline-none focus:ring-2 focus:ring-gray-900"
-            />
-          </div>
-
-          {/* Form Trigger Actions */}
-          <div className="flex gap-2 pt-1">
-            <button 
-              type="button" 
-              onClick={onClose} 
-              className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-medium transition-colors hover:bg-gray-200"
+          <div className={formFooterCls}>
+            <button
+              type="submit"
+              disabled={isSubmitting || !!errors.amount || fromAccount === toAccount}
+              className={`${submitBtnCls} justify-center`}
             >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              disabled={isSubmitting || !!errors.amount}
-              className={`flex-1 text-white py-2 rounded-lg text-xs font-semibold transition-colors disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed ${
-                isSavingsTransfer ? "bg-emerald-600 hover:bg-emerald-700" : "bg-gray-900 hover:bg-gray-800"
-              }`}
-            >
-              {isSubmitting ? "Processing..." : "Confirm Transfer"}
+              {isSubmitting ? (
+                "Processing..."
+              ) : (
+                <>
+                  Confirm Transfer
+                  <ArrowRight size={16} strokeWidth={2} />
+                </>
+              )}
             </button>
           </div>
         </form>
+
+        {/* Right rail: informational, lg: and up only */}
+        <div className="hidden lg:block lg:w-[42%] border-l border-gray-50 bg-gray-50/40 px-7 py-7 overflow-y-auto">
+          <div className="flex items-center gap-3">
+            <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${fromMeta.iconBg}`}>
+              <fromMeta.Icon size={20} strokeWidth={1.6} className={fromMeta.iconColor} />
+            </span>
+            <ArrowRight size={16} className="text-gray-300 shrink-0" />
+            <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${toMeta.iconBg}`}>
+              <toMeta.Icon size={20} strokeWidth={1.6} className={toMeta.iconColor} />
+            </span>
+          </div>
+
+          <h3 className="mt-4 text-base font-bold text-[#2d3436]">
+            {involvesVault ? "Vault Transfer" : "Internal Transfer"}
+          </h3>
+          <p className="mt-1.5 text-sm text-gray-400 leading-relaxed">
+            {involvesVault
+              ? `Move funds between your spending accounts and ${activeWalletName}.`
+              : "Move funds between your own accounts (cash, card)."}
+          </p>
+
+          <div className="mt-5 border-t border-gray-100 pt-4">
+            <div className="flex items-center gap-2 text-[#2d3436]">
+              <Lightbulb size={14} strokeWidth={1.8} />
+              <span className="text-sm font-bold">Quick tips</span>
+            </div>
+            <ul className="mt-2.5 space-y-2 text-sm text-gray-400 leading-relaxed">
+              <li className="flex gap-2">
+                <span className="text-gray-300">•</span>
+                Transfers are instant and free.
+              </li>
+              <li className="flex gap-2">
+                <span className="text-gray-300">•</span>
+                Pick any two accounts as From and To — including {walletName ? activeWalletName : "your accounts"} directly.
+              </li>
+              <li className="flex gap-2">
+                <span className="text-gray-300">•</span>
+                Use a memo to keep track of the reason for the transfer.
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
+    </ModalShell>
+  )
+}
+
+function AccountPills({
+  options,
+  active,
+  onPick,
+  walletName,
+}: {
+  options: AccountKey[]
+  active: AccountKey
+  onPick: (key: AccountKey) => void
+  walletName: string | null
+}) {
+  return (
+    <div className={`grid gap-1.5 ${options.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+      {options.map((key) => {
+        const meta = accountMeta(key, walletName)
+        const isActive = active === key
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onPick(key)}
+            className={`flex flex-col items-center gap-1 rounded-2xl border-2 px-2 py-2.5 text-center transition-all ${
+              isActive
+                ? "border-[#2d3436] bg-[#2d3436] text-white"
+                : "border-gray-100 bg-white text-gray-500 hover:border-gray-200"
+            }`}
+          >
+            <meta.Icon size={16} strokeWidth={1.8} className={isActive ? "text-white" : meta.iconColor} />
+            <span className="text-[11px] font-semibold leading-tight truncate max-w-full">{meta.label}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }

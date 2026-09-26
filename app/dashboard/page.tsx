@@ -15,11 +15,12 @@ import {
 } from "lucide-react"
 
 import { getDashboardData } from './_services/dashboard'
+
 // import { getLiveServerLiquidity } from "./components/liquidity-widget/liquidity"
 // import { getVendors } from "@/app/dashboard/_services/vendors"
 import RecentExpenses from "./components/ExpensesDashBlock/Activity"
 import DashboardSkeleton from "./components/DashboardSkeleton"
-
+import LiquidityCard from "./components/liquidity-widget/LiquidityCard"
 import {ExpenseTransaction } from '@/lib/types'
 
 // ── Main Page ─────────────────────────────────────────────────
@@ -39,7 +40,7 @@ async function DashboardContent() {
   const {
      categories, receivables, payables, netDebt, currentExpenses, previousExpenses, runway,
     debtLoadRatio, rawTransactions, walletName, savingsBalance,
-    receivablesRecords, payablesRecords,
+    receivablesRecords, payablesRecords, currentCycleId, householdMember,
     liveCash: cash, liveCard: card, liveTotal: total, liveMonthlyExpenses: monthlyExpenses,
   } = await getDashboardData()
 
@@ -79,18 +80,19 @@ async function DashboardContent() {
 
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {/* Liquidity */}
-        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-gray-400 mb-2 sm:mb-3">
-            <Wallet size={14} strokeWidth={1.5} />
-            <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">Liquidity</span>
-          </div>
-          <p className="text-xl sm:text-2xl font-bold text-[#2d3436]">Rs {total.toLocaleString()}</p>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
-            <span>Cash: Rs {cash.toLocaleString()}</span>
-            <span className="hidden sm:inline">·</span>
-            <span>Card: Rs {card.toLocaleString()}</span>
-          </div>
-        </div>
+  
+        <LiquidityCard
+          cash={cash}
+          card={card}
+          total={total}
+          walletName={walletName}
+          savingsBalance={savingsBalance}
+          householdId={householdMember?.household_id}
+          currentCycleId={currentCycleId}
+          // createdBy={createdBy}
+          // showToast={showToast}
+        />
+ 
 
   
         {/* This Month Spend */}

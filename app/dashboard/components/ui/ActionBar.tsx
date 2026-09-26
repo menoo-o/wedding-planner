@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { ArrowDownRight, ArrowDown, ArrowLeftRight, Plus, ChevronUp, ChevronDown } from "lucide-react"
+import { ArrowDownRight, ArrowDown, ArrowLeftRight, Plus, ChevronUp } from "lucide-react"
 import AddExpenseModal from "../modals/AddExpenseModal"
 import TopUpForm from "../TopUpForm"
 import LoanForm from "../LoanForm"

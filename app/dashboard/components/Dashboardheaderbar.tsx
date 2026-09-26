@@ -1,6 +1,6 @@
 // app/dashboard/components/DashboardHeaderBar.tsx
 
-import { Bell } from "lucide-react"
+// import { Bell } from "lucide-react"
 import ActionBar from "@/app/dashboard/components/ui/ActionBar"
 import RefreshButton from "@/app/dashboard/components/refreshStats"
 import { getDashboardData } from "@/app/dashboard/_services/dashboard"
@@ -51,13 +51,13 @@ export default async function DashboardHeaderBar() {
   <div className="hidden lg:block w-px h-6 bg-gray-200/70 mx-0.5" />
 
     <RefreshButton />
-
+{/* 
     <button
       type="button"
       className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100/70 transition-all relative"
     >
       <Bell size={18} strokeWidth={1.5} />
-    </button>
+    </button> */}
 
     <div className="w-9 h-9 rounded-xl bg-[#dfe6e9] flex items-center justify-center text-[#636e72] font-bold text-sm">
       U

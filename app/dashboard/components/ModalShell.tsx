@@ -9,8 +9,10 @@ interface ModalShellProps {
   title: string
   subtitle?: string
   onClose: () => void
-  /** md = single-column forms (deposit, loan). xl = two-column (add expense). */
+  /** md = single-column forms (deposit, loan, transfer). xl = two-column (add expense, transfer w/ side rail). */
   size?: "md" | "xl"
+  /** Optional icon badge shown left of the title, e.g. for TransferModal. */
+  icon?: ReactNode
   children: ReactNode
 }
 
@@ -25,6 +27,7 @@ export default function ModalShell({
   subtitle,
   onClose,
   size = "md",
+  icon,
   children,
 }: ModalShellProps) {
   const [mounted, setMounted] = useState(false)
@@ -74,11 +77,18 @@ export default function ModalShell({
         >
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-50 px-5 py-4 sm:px-8 sm:py-6">
-            <div className="min-w-0">
-              <h2 className="text-lg font-bold text-[#2d3436] sm:text-xl">{title}</h2>
-              {subtitle && (
-                <p className="mt-0.5 text-xs text-gray-400 sm:mt-1 sm:text-sm">{subtitle}</p>
+            <div className="flex min-w-0 items-center gap-3">
+              {icon && (
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#8b9dc3]/10 sm:h-11 sm:w-11">
+                  {icon}
+                </span>
               )}
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-[#2d3436] sm:text-xl">{title}</h2>
+                {subtitle && (
+                  <p className="mt-0.5 text-xs text-gray-400 sm:mt-1 sm:text-sm">{subtitle}</p>
+                )}
+              </div>
             </div>
             <button
               type="button"
