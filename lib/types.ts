@@ -146,7 +146,7 @@ export interface DashboardData {
   liveCard: number;
   liveTotal: number;
   liveMonthlyExpenses: number;
-  currentCycleId: string | null;
+  currentCycleId?: string | null;
   
 }
 
