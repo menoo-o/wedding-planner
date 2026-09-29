@@ -2,9 +2,9 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import type { DebtsPageData } from "@/app/dashboard/_db/debt"
+import type { DebtsPageData, MonthDebtsGroup } from "@/app/dashboard/_db/debt"
 import DebtsHeader from "./DebtsHeader"
-import DebtsStatsRow from "@/app/dashboard/components/debts/DebtsStatsRow"
+import DebtsStatsRow from "./DebtsStatsRow"
 import PeopleRollupRail from "./PeopleRollupRail"
 import DebtsFilterControls, { TabType } from "./DebtsFilterControls"
 import DebtsLedger from "./DebtsLedger"
@@ -15,47 +15,56 @@ interface ContainerProps {
 
 export default function DebtsClientContainer({ initialData }: ContainerProps) {
   const [activeTab, setActiveTab] = useState<TabType>("all")
-  const [searchQuery, setSearchQuery] = useState("")
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null)
+  const [visibleMonthsCount, setVisibleMonthsCount] = useState<number>(1)
 
-  const filteredDebts = useMemo(() => {
-    let list = initialData.debts
+  // Filter groups in memory based on tab and selected person
+  const filteredGroups = useMemo(() => {
+    const rawGroups = initialData.groups || []
+    const slicedGroups = rawGroups.slice(0, visibleMonthsCount)
 
-    if (activeTab === "owed") {
-      list = list.filter((d) => d.direction === "receivable")
-    } else if (activeTab === "owe") {
-      list = list.filter((d) => d.direction === "payable")
+    return slicedGroups.map((group): MonthDebtsGroup => {
+      const filterItem = (d: (typeof group.needsAttention)[number]) => {
+        if (activeTab !== "all" && d.direction !== activeTab) {
+          return false
+        }
+        if (selectedPerson && d.counterparty.toLowerCase() !== selectedPerson.toLowerCase()) {
+          return false
+        }
+        return true
+      }
+
+      const filteredAttention = group.needsAttention.filter(filterItem)
+      const filteredSettled = group.settled.filter(filterItem)
+
+      return {
+        ...group,
+        openCount: filteredAttention.length,
+        needsAttention: filteredAttention,
+        settled: filteredSettled,
+      }
+    })
+  }, [initialData.groups, visibleMonthsCount, activeTab, selectedPerson])
+
+  const handleLoadEarlierMonth = () => {
+    if (visibleMonthsCount < (initialData.groups?.length ?? 1)) {
+      setVisibleMonthsCount((prev) => prev + 1)
     }
-
-    if (selectedPerson) {
-      list = list.filter(
-        (d) => d.counterparty_name.toLowerCase() === selectedPerson.toLowerCase()
-      )
-    }
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      list = list.filter(
-        (d) =>
-          d.counterparty_name.toLowerCase().includes(q) ||
-          d.description.toLowerCase().includes(q)
-      )
-    }
-
-    return list
-  }, [initialData.debts, activeTab, selectedPerson, searchQuery])
+  }
 
   return (
     <div className="space-y-6">
       <DebtsHeader />
+
       <DebtsStatsRow stats={initialData.stats} />
+
+      {/* Tabs with clean background and no search/filter controls */}
       <DebtsFilterControls
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        totalCount={initialData.debts.length}
       />
+
+      {/* People Rollup Rail (shows clean zero-state box if empty) */}
       <PeopleRollupRail
         people={initialData.peopleRollup}
         selectedPerson={selectedPerson}
@@ -63,7 +72,13 @@ export default function DebtsClientContainer({ initialData }: ContainerProps) {
           setSelectedPerson((prev) => (prev === name ? null : name))
         }
       />
-      <DebtsLedger debts={filteredDebts} />
+
+      {/* Main Ledger enclosed in the white card */}
+      <DebtsLedger
+        groups={filteredGroups}
+        onLoadEarlierMonth={handleLoadEarlierMonth}
+        hasMoreMonths={visibleMonthsCount < (initialData.groups?.length ?? 1)}
+      />
     </div>
   )
 }
