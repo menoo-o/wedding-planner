@@ -26,7 +26,7 @@ export default function PeopleRollupRail({
       <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
         {people.map((person) => {
           const isSelected = selectedPerson?.toLowerCase() === person.name.toLowerCase()
-          const isReceivable = person.direction === "receivable"
+          const isReceivable = person.direction === "you_are_owed"
 
           return (
             <button
