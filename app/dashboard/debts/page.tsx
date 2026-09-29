@@ -22,7 +22,7 @@ async function DebtsDataFetcher() {
 
 export default function DebtsPage() {
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+   <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-6 lg:px-0">
       <Suspense fallback={<DebtsSkeleton />}>
         <DebtsDataFetcher />
       </Suspense>

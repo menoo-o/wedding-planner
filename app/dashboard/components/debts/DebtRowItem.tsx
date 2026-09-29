@@ -16,49 +16,50 @@ export default function DebtRowItem({ debt, variant }: DebtRowItemProps) {
   const isSettled = variant === "settled" || debt.isSettled
   const isYouOwe = debt.direction === "you_owe"
 
-  // ── Variant 1: Settled Row Item ───────────────────────────────
+  // Calculate percentage paid / received
+  const percentagePaid =
+    debt.totalAmount > 0
+      ? Math.min(100, Math.round((debt.paidAmount / debt.totalAmount) * 100))
+      : 0
+
+  // ── Variant 1: Settled Row ──
   if (isSettled) {
     return (
       <div className="border-b border-gray-50/80 last:border-b-0">
         <div
           onClick={() => setIsOpen((prev) => !prev)}
-          className="flex items-center justify-between px-4 sm:px-6 py-3.5 hover:bg-gray-50/50 transition-colors cursor-pointer group"
+          className="flex items-center justify-between p-3.5 sm:px-6 sm:py-3.5 hover:bg-gray-50/50 transition-colors cursor-pointer group"
         >
-          {/* Avatar + Subtitle */}
-          <div className="flex items-center gap-3 sm:gap-3.5 min-w-0 pr-3">
+          {/* Avatar + Counterparty info */}
+          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 pr-3">
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                isYouOwe ? "bg-rose-50 text-rose-500" : "bg-emerald-50 text-emerald-600"
+              className={`w-8 h-8 rounded-xl sm:rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                isYouOwe ? "bg-rose-50 text-[#e17055]" : "bg-emerald-50 text-[#00b894]"
               }`}
             >
               {debt.initials}
             </div>
             <div className="min-w-0">
               <p className="text-xs sm:text-sm font-semibold text-[#2d3436] truncate">
-                {debt.counterparty}
+                {isYouOwe ? `Paid to ${debt.counterparty}` : `Received from ${debt.counterparty}`}
               </p>
-              <p className="text-[11px] text-gray-400 truncate">
+              <p className="text-[10px] sm:text-xs text-gray-400 truncate mt-0.5">
                 {debt.description}
-                {debt.createdAtFormatted && <span> · {debt.createdAtFormatted}</span>}
               </p>
             </div>
           </div>
 
-          {/* Settled Badge + Amount + Caret */}
-          <div className="flex items-center gap-3 sm:gap-5 shrink-0">
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-emerald-50 text-emerald-600 uppercase">
+          {/* Settled Badge + Amount + Chevron */}
+          <div className="flex items-center gap-2 sm:gap-3.5 shrink-0">
+            <span className="px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold tracking-wider bg-emerald-50 text-[#00b894] uppercase">
               Settled
             </span>
             <span className="text-xs sm:text-sm font-semibold text-[#2d3436] tabular-nums">
               Rs {debt.totalAmount.toLocaleString()}
             </span>
-            <button
-              type="button"
-              className="text-gray-300 group-hover:text-gray-500 transition-colors"
-              aria-label="Toggle details"
-            >
-              {isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-            </button>
+            <div className="text-gray-300 group-hover:text-gray-500 transition-colors">
+              {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </div>
           </div>
         </div>
 
@@ -74,76 +75,106 @@ export default function DebtRowItem({ debt, variant }: DebtRowItemProps) {
     )
   }
 
-  // ── Variant 2: Needs Attention Row Item ───────────────────────
+  // ── Variant 2: Needs Attention (Active) Row ──
   return (
     <div className="border-b border-gray-50 last:border-b-0">
       <div
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-4 sm:px-6 py-4 hover:bg-gray-50/50 transition-colors cursor-pointer group"
+        className="p-3.5 sm:px-6 sm:py-4 hover:bg-gray-50/50 transition-colors cursor-pointer group"
       >
-        {/* Left: Counterparty Avatar + Title / Due Date */}
-        <div className="flex items-center gap-3.5 min-w-0 md:w-5/12">
-          <div
-            className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-              isYouOwe ? "bg-rose-100/70 text-rose-500" : "bg-emerald-100/70 text-emerald-600"
-            }`}
-          >
-            {debt.initials}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-[#2d3436] truncate">
-              {debt.counterparty}
-            </p>
-            <p className="text-xs text-gray-500 truncate mt-0.5">
-              {debt.description}
-            </p>
-            {debt.dueBadgeText && (
-              <p className="text-[11px] text-gray-400 mt-0.5 truncate">
-                {debt.dueBadgeText}
-              </p>
-            )}
-          </div>
-        </div>
+        {/* Main Content Area (Mobile: Stacked cleanly, Desktop: Multi-column grid) */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3">
+          
+          {/* Top Row on Mobile: Avatar + Phrasing & Amount */}
+          <div className="flex items-center justify-between md:justify-start gap-2.5 sm:gap-3.5 min-w-0 md:w-5/12">
+            <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+              <div
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                  isYouOwe ? "bg-rose-50 text-[#e17055]" : "bg-emerald-50 text-[#00b894]"
+                }`}
+              >
+                {debt.initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-bold text-[#2d3436] truncate">
+                  {isYouOwe ? `You owe ${debt.counterparty}` : `${debt.counterparty} owes you`}
+                </p>
+                <p className="text-[10px] sm:text-xs text-gray-400 truncate mt-0.5">
+                  {debt.description}
+                </p>
+              </div>
+            </div>
 
-        {/* Center: Dynamic Progress Bar & Remaining Percentage */}
-        <div className="w-full md:w-4/12 md:px-4">
-          <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${
-                isYouOwe ? "bg-[#e17055]" : "bg-[#00b894]"
+            {/* Amount visible on mobile in top-right */}
+            <div className="flex items-center gap-1.5 md:hidden shrink-0">
+              <span
+                className={`text-xs sm:text-sm font-bold tabular-nums ${
+                  isYouOwe ? "text-[#e17055]" : "text-[#2d3436]"
+                }`}
+              >
+                Rs {debt.remainingAmount.toLocaleString()}
+              </span>
+              <div className="text-gray-300">
+                {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Bar & Repayment Metric */}
+          <div className="w-full md:w-4/12 pl-10.5 sm:pl-0 md:px-4">
+            <div className="w-full bg-gray-100 h-1 sm:h-1.5 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  isYouOwe ? "bg-[#e17055]" : "bg-[#00b894]"
+                }`}
+                style={{ width: `${Math.max(percentagePaid > 0 ? 5 : 0, percentagePaid)}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-gray-400 mt-1 font-medium">
+              <span>
+                {percentagePaid}% {isYouOwe ? "paid" : "received"}
+                {debt.paidAmount > 0 && (
+                  <span className="hidden sm:inline text-gray-500 ml-1">
+                    (Rs {debt.paidAmount.toLocaleString()} of {debt.totalAmount.toLocaleString()})
+                  </span>
+                )}
+              </span>
+
+              {/* Mobile-only directional badge next to progress metric */}
+              <span
+                className={`md:hidden px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                  isYouOwe ? "bg-rose-50 text-[#e17055]" : "bg-emerald-50 text-[#00b894]"
+                }`}
+              >
+                {isYouOwe ? "You Owe" : "Owed to You"}
+              </span>
+            </div>
+          </div>
+
+          {/* Desktop Right Side: Tag + Remaining Amount + Caret */}
+          <div className="hidden md:flex items-center justify-end gap-3 md:gap-4 md:w-3/12 shrink-0">
+            <span
+              className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase ${
+                isYouOwe ? "bg-rose-50 text-[#e17055]" : "bg-emerald-50 text-[#00b894]"
               }`}
-              style={{ width: `${Math.max(5, debt.remainingPercentage)}%` }}
-            />
-          </div>
-          <p className="text-[11px] text-gray-400 mt-1.5">
-            {debt.remainingPercentage}% remaining
-          </p>
-        </div>
-
-        {/* Right: Directional Badge + Amount + Toggle Arrow */}
-        <div className="flex items-center justify-between md:justify-end gap-3 md:gap-4 md:w-3/12 shrink-0">
-          <span
-            className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase ${
-              isYouOwe
-                ? "bg-rose-50 text-rose-500"
-                : "bg-teal-50 text-[#00a884]"
-            }`}
-          >
-            {isYouOwe ? "You Owe" : "You're Owed"}
-          </span>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-[#2d3436] tabular-nums">
-              Rs {debt.remainingAmount.toLocaleString()}
-            </span>
-            <button
-              type="button"
-              className="text-gray-300 group-hover:text-gray-500 transition-colors"
-              aria-label="Toggle details"
             >
-              {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </button>
+              {isYouOwe ? "You Owe" : "Owed to You"}
+            </span>
+
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-sm font-bold tabular-nums ${
+                  isYouOwe ? "text-[#e17055]" : "text-[#2d3436]"
+                }`}
+              >
+                Rs {debt.remainingAmount.toLocaleString()}
+              </span>
+              <div className="text-gray-300 group-hover:text-gray-500 transition-colors">
+                {isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+              </div>
+            </div>
           </div>
+
         </div>
       </div>
 

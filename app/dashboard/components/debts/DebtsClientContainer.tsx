@@ -53,7 +53,7 @@ export default function DebtsClientContainer({ initialData }: ContainerProps) {
   }
 
   return (
-    <div className="space-y-6">
+  <div className="space-y-3.5 sm:space-y-6 pb-20 sm:pb-6">
       <DebtsHeader />
 
       <DebtsStatsRow stats={initialData.stats} />

@@ -44,9 +44,9 @@ export default function DebtsLedger({
 
   return (
     /* ── Outer White Table/Card Wrapper (Fixes 1st Issue: Blank Background) ── */
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-7">
-      <div className="space-y-8">
-        {groups.map((group, groupIdx) => {
+    <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100/90 shadow-[0_1px_4px_rgba(0,0,0,0.02)] p-4 sm:p-7">
+    <div className="space-y-6 sm:space-y-8">
+      {groups.map((group, groupIdx) => {
           const isMonthExpanded = openMonths[group.monthYearLabel] ?? true
           const isSettledExpanded = expandedSettled[group.monthYearLabel] ?? false
           const hasNoDebts =
@@ -54,22 +54,21 @@ export default function DebtsLedger({
           const isLastGroup = groupIdx === groups.length - 1
 
           return (
-            <div key={group.monthYearLabel} className="relative pl-6 sm:pl-8">
+           <div key={group.monthYearLabel} className="relative pl-5 sm:pl-7">
               {/* Continuous Timeline Rail */}
               {!isLastGroup && (
-                <div className="absolute left-2.5 top-3.5 bottom-0 w-[1.5px] bg-gray-200 -translate-x-1/2" />
-              )}
+                <div className="absolute left-2 top-3 bottom-0 w-[1.5px] bg-gray-200/80 -translate-x-1/2" />
+               )}
 
               {/* Timeline Bullet Node */}
-              <div className="absolute left-2.5 top-2.5 w-2.5 h-2.5 rounded-full bg-[#8b9dc3] -translate-x-1/2 border-2 border-white ring-2 ring-gray-100 z-10" />
-
+             <div className="absolute left-2 top-2.5 w-2 h-2 rounded-full bg-[#8b9dc3] -translate-x-1/2 ring-2 ring-gray-100 z-10" />
               {/* Month Header Bar */}
               <div
                 onClick={() => toggleMonth(group.monthYearLabel)}
                 className="flex items-center justify-between mb-4 cursor-pointer select-none group"
               >
-                <div className="flex items-center gap-2.5">
-                  <h2 className="text-base sm:text-lg font-bold text-[#2d3436] tracking-tight group-hover:text-black transition-colors">
+                <div className="flex items-center justify-between mb-3 cursor-pointer select-none">
+                  <h2 className="text-sm sm:text-base font-bold text-[#2d3436]">
                     {group.monthYearLabel}
                   </h2>
 
