@@ -553,17 +553,72 @@ function getCategoryIcon(categoryName: string = "General") {
 
 function ExpensesSkeleton() {
   return (
-    <div className="p-8 animate-pulse">
-      <div className="h-4 bg-gray-200 rounded-lg w-48 mb-8" />
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-28 bg-gray-200 rounded-2xl" />
+    <div className="px-4 py-6 sm:p-8">
+      {/* Header - static text, no skeleton needed */}
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-[#2d3436] underline decoration-2">
+          Expenses
+        </h1>
+        <p className="text-xs sm:text-sm text-gray-400 mt-1">
+          September 2026
+        </p>
+      </div>
+
+      {/* Stat cards - static labels, pulsing values */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        {[
+          { label: "Total Spend" },
+          { label: "Pending Payables" },
+          { label: "Liquidity" },
+          { label: "Burn Rate" },
+        ].map((card, i) => (
+          <div
+            key={i}
+            className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-3 sm:p-4"
+          >
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
+              {card.label}
+            </p>
+            <div className="h-6 sm:h-7 bg-gray-200 rounded-md w-3/4 animate-pulse" />
+            <div className="h-3 bg-gray-100 rounded w-1/2 mt-2 animate-pulse" />
+          </div>
         ))}
       </div>
-      <div className="h-16 bg-gray-200 rounded-xl mb-4" />
-      <div className="space-y-3">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-16 bg-gray-200 rounded-xl" />
+
+      {/* Filter tabs - static labels, no skeleton */}
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto no-scrollbar">
+        {["All expenses", "Personal Care", "Household", "Food"].map((tab, i) => (
+          <span
+            key={i}
+            className={`shrink-0 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm whitespace-nowrap ${
+              i === 0
+                ? "bg-white border border-gray-200 font-medium text-[#2d3436]"
+                : "text-gray-400"
+            }`}
+          >
+            {tab}
+          </span>
+        ))}
+      </div>
+
+      {/* Transaction list - pulsing rows only */}
+      <div className="space-y-4">
+        {[...Array(2)].map((_, groupIdx) => (
+          <div key={groupIdx}>
+            <div className="h-3 bg-gray-100 rounded w-40 mb-2 animate-pulse" />
+            <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-100">
+              {[...Array(2)].map((_, rowIdx) => (
+                <div key={rowIdx} className="flex items-center gap-3 p-3 sm:p-4">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-200 animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 bg-gray-200 rounded w-1/3 animate-pulse" />
+                    <div className="h-2.5 bg-gray-100 rounded w-1/4 animate-pulse" />
+                  </div>
+                  <div className="h-3.5 bg-gray-200 rounded w-12 animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>
