@@ -51,7 +51,7 @@ export default function DebtsClientContainer({ initialData }: ContainerProps) {
       setVisibleMonthsCount((prev) => prev + 1)
     }
   }
-
+//app/dashboard/debts/_components/DebtsClientContainer.tsx
   return (
   <div className="space-y-3.5 sm:space-y-6 pb-20 sm:pb-6">
       <DebtsHeader />

@@ -41,7 +41,7 @@ export default function DebtsLedger({
 
   // The bottom-most visible month provides the label for "Load [PreviousMonth]"
   const lowestVisibleMonth = groups[groups.length - 1]
-
+  //app/dashboard/debts/_components/DebtsLedger.tsx
   return (
     /* ── Outer White Table/Card Wrapper (Fixes 1st Issue: Blank Background) ── */
     <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100/90 shadow-[0_1px_4px_rgba(0,0,0,0.02)] p-4 sm:p-7">

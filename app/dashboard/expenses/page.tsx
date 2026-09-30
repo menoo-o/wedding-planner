@@ -403,18 +403,18 @@ const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
                         {tx.description || tx.category_name}
                       </p>
                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                  <span className="text-xs text-gray-400 uppercase sm:lowercase tracking-wider truncate">
+                  <span className="text-xs text-gray-400 capitalize lg:uppercase tracking-wider truncate">
                     {tx.category_name}
                   </span>
-                  <span className="hidden sm:inline text-gray-300">·</span>
-                  <span className="hidden sm:inline text-xs text-gray-400">
+                  <span className="sm:inline text-gray-300">|</span>
+                  {/* <span className="hidden sm:inline text-xs text-gray-400">
                     {new Date(tx.created_at).toLocaleTimeString("en-US", {
                       hour: "2-digit",
                       minute: "2-digit",
                       hour12: true,
                     })}
-                  </span>
-                  <span className="text-gray-300">·</span>
+                  </span> */}
+                  {/* <span className="text-gray-300">·</span> */}
                   <span className="text-xs text-gray-400 capitalize">
                     {tx.payment_account}
                   </span>
