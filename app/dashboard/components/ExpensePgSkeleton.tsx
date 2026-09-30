@@ -14,7 +14,7 @@ import {
 
 export default function ExpensesSkeleton() {
   return (
-    <div className="space-y-5 sm:space-y-6 pb-20 sm:pb-6">
+    <div className="space-y-3.5 sm:space-y-5 pb-20 sm:pb-6 animate-pulse">
       {/* ── 1. Header with Top-Right Action Controls ── */}
       <div className="flex items-start justify-between gap-4 pt-1">
         <div>
@@ -25,18 +25,7 @@ export default function ExpensesSkeleton() {
         </div>
 
         {/* Top-Right Control Island */}
-        <div className="flex items-center gap-2 bg-white/80 p-1.5 rounded-2xl border border-gray-100 shadow-sm shrink-0">
-          <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#2d3436] text-white text-xs font-semibold">
-            <Plus size={14} strokeWidth={2.5} />
-            <span className="hidden sm:inline">New transaction</span>
-          </div>
-          <div className="w-8 h-8 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
-            <RotateCw size={13} strokeWidth={2} />
-          </div>
-          <div className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600">
-            U
-          </div>
-        </div>
+        
       </div>
 
       {/* ── 2. Stat Cards Grid (Accurate Icons & Labels) ── */}

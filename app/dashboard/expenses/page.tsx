@@ -234,7 +234,7 @@ const isBurningFaster = velocityRatio > 1
 const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
 //parent / main expenses page
   return (
- <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-6 lg:px-0">
+ <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-4 lg:px-0">
   {/* ── Top Bar ──────────────────────────────────────────── */}
   <div className="flex items-center justify-between mb-4 sm:mb-8">
     <div>

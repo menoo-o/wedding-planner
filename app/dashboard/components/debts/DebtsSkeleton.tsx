@@ -7,10 +7,10 @@ export default function DebtsSkeleton() {
       <div className="flex items-center justify-between gap-2 pt-1 pb-1">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#2d3436] tracking-tight">
-            Debts & Obligations
+            Debt Tracker
           </h1>
           <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5 leading-tight">
-            Track loans and reimbursements with people you trust.
+            Track Your Dues
           </p>
         </div>
 
