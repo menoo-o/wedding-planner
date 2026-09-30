@@ -14,7 +14,7 @@ import {
 
 export default function ExpensesSkeleton() {
   return (
-    <div className="space-y-3.5 sm:space-y-5 pb-20 sm:pb-6 animate-pulse">
+    <div className="space-y-3.5 sm:space-y-6 pb-20 sm:pb-6 animate-pulse">
       {/* ── 1. Header with Top-Right Action Controls ── */}
       <div className="flex items-start justify-between gap-4 pt-1">
         <div>
