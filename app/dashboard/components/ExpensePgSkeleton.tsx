@@ -7,23 +7,21 @@ import {
   Clock,
   ArrowLeftRight,
   Filter,
-  Plus,
-  RotateCw,
   ChevronRight,
 } from "lucide-react"
 
 export default function ExpensesSkeleton() {
   return (
-    <div className="space-y-3.5 sm:space-y-6 pb-20 sm:pb-6 animate-pulse">
-      {/* ── 1. Header with Top-Right Action Controls ── */}
-      <div className="flex items-start justify-between gap-4 pt-1">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#2d3436] tracking-tight">
-            Expenses
-          </h1>
-          <p className="text-xs text-gray-400 mt-0.5">September 2026</p>
-        </div>
-
+    <div className="max-w-7xl mx-auto px-4 sm:px-4 lg:px-0">
+      <div className="space-y-3.5 sm:space-y-6 pb-20 sm:pb-6 animate-pulse">
+        {/* ── 1. Header with Top-Right Action Controls ── */}
+        <div className="flex items-start justify-between gap-4 pt-1">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#2d3436] tracking-tight">
+              Expenses
+            </h1>
+            <p className="text-xs text-gray-400 mt-0.5">September 2026</p>
+          </div>
         {/* Top-Right Control Island */}
         
       </div>
@@ -146,5 +144,6 @@ export default function ExpensesSkeleton() {
         ))}
       </div>
     </div>
+     </div>
   )
 }
