@@ -403,7 +403,7 @@ const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
                         {tx.description || tx.category_name}
                       </p>
                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                  <span className="text-xs text-gray-400 uppercase tracking-wider truncate">
+                  <span className="text-xs text-gray-400 uppercase sm:lowercase tracking-wider truncate">
                     {tx.category_name}
                   </span>
                   <span className="hidden sm:inline text-gray-300">·</span>

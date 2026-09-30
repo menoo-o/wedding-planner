@@ -63,7 +63,7 @@ const counterpartyValidator = z
 const categoryValidator = z
   .string()
   .min(2, { error: "Category name must be at least 2 characters" })
-  .max(30, { error: "Category name cannot exceed 30 characters" })
+  .max(15, { error: "Category name cannot exceed 15 characters" })
   .refine(
     (val) => val.trim().length > 0,
     { error: "Category name cannot be just spaces" }
