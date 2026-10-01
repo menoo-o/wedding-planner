@@ -180,12 +180,13 @@ export default function DebtRowItem({ debt, variant }: DebtRowItemProps) {
       </div>
 
       {isOpen && (
-        <RepaymentHistoryTable
+       <RepaymentHistoryTable
+          debt={debt}
           installments={debt.installments}
           originalAmount={debt.totalAmount}
           totalPaid={debt.paidAmount}
           remainingAmount={debt.remainingAmount}
-        />
+  />
       )}
     </div>
   )
