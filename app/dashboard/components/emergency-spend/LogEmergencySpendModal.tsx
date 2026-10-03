@@ -73,17 +73,18 @@ export default function LogEmergencySpendModal({
     setServerError(null)
     try {
       // If category is 'other', use the custom category value entered by the user
-      const finalCategory =
-        data.category.toLowerCase() === "other" && data.custom_category
-          ? data.custom_category.trim()
-          : data.category
+      // const finalCategory =
+      //   data.category.toLowerCase() === "other" && data.custom_category
+      //     ? data.custom_category.trim()
+      //     : data.category
 
       await recordVaultExpenseAction({
         householdId,
         title: data.title,
         payeeName: data.payee_name || null,
-        category: finalCategory,
-        amount: data.amount,
+       category: data.category, // <-- Stays typed as VaultExpenseCategory
+       customCategory: data.category === "other" ? data.custom_category : null, // <-- Pass the 1-word string here
+      amount: data.amount,
         status: data.status,
         dueDate: data.status === "planned" ? data.incurred_date : null,
         recurrence: data.recurrence,
