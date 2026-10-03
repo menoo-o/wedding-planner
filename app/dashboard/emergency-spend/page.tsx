@@ -7,14 +7,17 @@ import EmergencySpendHeader from "@/app/dashboard/components/emergency-spend/Eme
 import EmergencySpendSkeleton from "@/app/dashboard/components/emergency-spend/EmergencySpendSkeleton"
 import { Suspense } from "react"
 
-
-// Async child component that triggers Suspense streaming
-async function EmergencySpendDataLoader({ householdId }: { householdId: string }) {
-  const initialData = await getEmergencySpendData(householdId)
-  return <EmergencySpendClientContainer initialData={initialData} />
+export default async function EmergencySpendPage() {
+  return (
+    <Suspense fallback={<EmergencySpendSkeleton />}>
+      <EmergencySpendContent />
+    </Suspense>
+  )
 }
 
-export default async function EmergencySpendPage() {
+// ── Data + Content ────────────────────────────────────────────
+
+async function EmergencySpendContent() {
   const supabase = await createClient()
 
   const {
@@ -30,15 +33,12 @@ export default async function EmergencySpendPage() {
 
   if (!member) redirect("/dashboard")
 
+  const initialData = await getEmergencySpendData(member.household_id)
+
   return (
     <div className="px-4 py-4 sm:p-8 max-w-7xl mx-auto space-y-4 sm:space-y-6">
-      {/* 1. Header renders immediately (0 latency, no loading flash) */}
       <EmergencySpendHeader />
-
-      {/* 2. Suspense boundary streaming the skeleton while fetching data */}
-      <Suspense fallback={<EmergencySpendSkeleton />}>
-        <EmergencySpendDataLoader householdId={member.household_id} />
-      </Suspense>
+      <EmergencySpendClientContainer initialData={initialData} />
     </div>
   )
 }
