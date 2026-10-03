@@ -40,14 +40,18 @@ export const getEmergencySpendData = cache(
   async (householdId: string, targetYear = new Date().getFullYear()): Promise<EmergencySpendPageData> => {
     const supabase = await createClient()
 
-    // 1. Fetch available Emergency Fund balance
-    const { data: savingsConfig } = await supabase
-      .from("household_savings_config")
-      .select("savings_balance")
-      .eq("household_id", householdId)
-      .single()
+  // 1. Fetch available Emergency Fund balance directly from households
+  const { data: householdRow, error: hhErr } = await supabase
+    .from("households")
+    .select("savings_balance, savings_wallet_name")
+    .eq("id", householdId)
+    .single()
 
-    const availableEmergencyBalance = Number(savingsConfig?.savings_balance) || 0
+  if (hhErr) {
+    console.error("Failed to load household vault balance:", hhErr.message)
+  }
+
+  const availableEmergencyBalance = Number(householdRow?.savings_balance) || 0
 
     // 2. Fetch all expenses for this household
     const { data: allRawTxs } = await supabase
