@@ -35,8 +35,8 @@ async function EmergencySpendContent() {
 
   const initialData = await getEmergencySpendData(member.household_id)
 
-  return (
-    <div className="px-4 py-4 sm:p-8 max-w-7xl mx-auto space-y-4 sm:space-y-6">
+return (
+    <div className="px-4 pt-1 pb-6 sm:px-8 sm:pt-2 sm:pb-8 max-w-7xl mx-auto space-y-3.5 sm:space-y-4">
       <EmergencySpendHeader />
       <EmergencySpendClientContainer initialData={initialData} />
     </div>
