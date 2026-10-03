@@ -24,7 +24,7 @@ const SIDEBAR_NAV: NavItem[] = [
   { label: "Overview", href: "/dashboard", icon: <LayoutDashboard size={18} strokeWidth={1.5} /> },
   { label: "Expenses", href: "/dashboard/expenses", icon: <Receipt size={18} strokeWidth={1.5} /> },
   { label: "Debts & Receivables", href: "/dashboard/debts", icon: <HandCoins size={18} strokeWidth={1.5} /> },
-  { label: "Savings", href: "/dashboard/savings", icon: <PiggyBank size={18} strokeWidth={1.5} /> },
+  { label: "Savings", href: "/dashboard/emergency-spend", icon: <PiggyBank size={18} strokeWidth={1.5} /> },
   { label: "Analytics", href: "/dashboard/analytics", icon: <BarChart3 size={18} strokeWidth={1.5} /> },
   { label: "Vendors", href: "/dashboard/vendors", icon: <Store size={18} strokeWidth={1.5} /> },
 ]

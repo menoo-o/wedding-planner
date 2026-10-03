@@ -25,7 +25,7 @@ const TABS: TabItem[] = [
   { label: "Home", href: "/dashboard", icon: <LayoutDashboard {...ICON} /> },
   { label: "Expenses", href: "/dashboard/expenses", icon: <Receipt {...ICON} /> },
   { label: "Debts", href: "/dashboard/debts", icon: <HandCoins {...ICON} /> },
-  { label: "Savings", href: "/dashboard/savings", icon: <PiggyBank {...ICON} /> },
+  { label: "Savings", href: "/dashboard/emergency-spend", icon: <PiggyBank {...ICON} /> },
 ]
 
 // Everything that lives behind "More". Analytics is included so it isn't
