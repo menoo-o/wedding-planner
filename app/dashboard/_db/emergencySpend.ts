@@ -70,70 +70,73 @@ export const getEmergencySpendData = cache(
       if (!isNaN(yr)) yearsSet.add(yr)
     }
     const availableYears = Array.from(yearsSet).sort((a, b) => b - a)
-
-    // 4. Lifetime total spend
     let allTimeTotalSpend = 0
     let spentInYear = 0
-    let spentPrevYear = 0
+    let spentPrevYear = 0 // <-- Ensure this is declared
     let largestExpenseAmount = 0
     let largestExpenseTitle: string | null = null
 
     const yearItems: EmergencySpendRow[] = []
     const categoryCountMap: Record<string, number> = {}
+    let paidExpensesCount = 0 // <── Tracks ONLY settled/paid items
 
-    for (const r of allRecords) {
-      const amt = Number(r.amount) || 0
-      if (r.status === "paid") {
-        allTimeTotalSpend += amt
+for (const r of allRecords) {
+  const amt = Number(r.amount) || 0
+  const yr = new Date(r.created_at).getFullYear()
 
-        const yr = new Date(r.created_at).getFullYear()
-        if (yr === targetYear) {
-          spentInYear += amt
-          yearItems.push(r)
+  if (r.status === "paid") {
+    allTimeTotalSpend += amt
 
-          // Category counters for current year
-          categoryCountMap[r.category] = (categoryCountMap[r.category] || 0) + 1
+    if (yr === targetYear) {
+      spentInYear += amt
+      paidExpensesCount += 1
 
-          // Track largest single hit
-          if (amt > largestExpenseAmount) {
-            largestExpenseAmount = amt
-            largestExpenseTitle = r.title
-          }
-        } else if (yr === targetYear - 1) {
-          spentPrevYear += amt
-        }
-      } else if (new Date(r.created_at).getFullYear() === targetYear) {
-        // Include planned items in list view
-        yearItems.push(r)
+      // Category counters for settled expenses
+      categoryCountMap[r.category] = (categoryCountMap[r.category] || 0) + 1
+
+      // Track largest single hit
+      if (amt > largestExpenseAmount) {
+        largestExpenseAmount = amt
+        largestExpenseTitle = r.title
       }
+    } else if (yr === targetYear - 1) {
+      spentPrevYear += amt // <-- Tracks previous year's total
     }
+  }
 
-    // YoY Delta calculation
-    let yearOverYearDelta = 0
-    if (spentPrevYear > 0) {
-      yearOverYearDelta = Math.round(((spentInYear - spentPrevYear) / spentPrevYear) * 100)
-    }
+  // Include both paid and planned in the selected year's list
+  if (yr === targetYear) {
+    yearItems.push(r)
+  }
+}
 
-    // Formatted category breakdown string
-    const categoryParts = Object.entries(categoryCountMap)
-      .slice(0, 3)
-      .map(([cat, count]) => `${count} ${cat}`)
-    const categoryCountsText = categoryParts.length > 0 ? categoryParts.join(" • ") : "No categories yet"
+// ── Declare and compute yearOverYearDelta here ──
+let yearOverYearDelta = 0
+if (spentPrevYear > 0) {
+  yearOverYearDelta = Math.round(((spentInYear - spentPrevYear) / spentPrevYear) * 100)
+}
 
-    return {
-      selectedYear: targetYear,
-      availableYears,
-      allTimeTotalSpend,
-      stats: {
-        availableEmergencyBalance,
-        spentInYear,
-        yearOverYearDelta,
-        expensesCount: yearItems.length,
-        categoryCountsText,
-        largestExpenseAmount,
-        largestExpenseTitle,
-      },
-      expenses: yearItems,
-    }
+// Category breakdown string
+const categoryParts = Object.entries(categoryCountMap)
+  .slice(0, 3)
+  .map(([cat, count]) => `${count} ${cat}`)
+const categoryCountsText =
+  categoryParts.length > 0 ? categoryParts.join(" • ") : "No settled expenses"
+
+return {
+  selectedYear: targetYear,
+  availableYears,
+  allTimeTotalSpend,
+  stats: {
+    availableEmergencyBalance,
+    spentInYear,
+    yearOverYearDelta, // <-- Now properly in scope
+    expensesCount: paidExpensesCount,
+    categoryCountsText,
+    largestExpenseAmount,
+    largestExpenseTitle,
+  },
+  expenses: yearItems,
+ }
   }
 )

@@ -14,6 +14,7 @@ interface RecordVaultExpenseParams {
   title: string
   payeeName?: string | null
   category: VaultExpenseCategory
+  customCategory?: string | null // 1-word custom category when category is 'other'
   amount: number
   status: VaultExpenseStatus
   dueDate?: string | null
@@ -61,7 +62,16 @@ export async function recordVaultExpenseAction(params: RecordVaultExpenseParams)
 
   const nowIso = new Date().toISOString()
 
-  // 3. Insert into vault_expenses
+  // 3. Format notes to cleanly embed the 1-word custom category if provided
+  let formattedNotes = params.notes?.trim() || null
+  if (params.category === "other" && params.customCategory?.trim()) {
+    const cleanCustomTag = params.customCategory.trim().toLowerCase()
+    formattedNotes = formattedNotes 
+      ? `[${cleanCustomTag}] ${formattedNotes}` 
+      : `[${cleanCustomTag}]`
+  }
+
+  // 4. Insert into vault_expenses
   const { data: record, error: insertError } = await supabase
     .from("vault_expenses")
     .insert({
@@ -69,14 +79,14 @@ export async function recordVaultExpenseAction(params: RecordVaultExpenseParams)
       created_by: user.id,
       title: params.title.trim(),
       payee_name: params.payeeName?.trim() || null,
-      category: params.category,
+      category: params.category, // stays 'other' to satisfy SQL check constraint
       amount: cleanAmount,
       vault_balance_after: nextVaultBalance,
       status: params.status,
       due_date: params.dueDate || null,
       paid_at: params.status === "paid" ? nowIso : null,
       recurrence: params.recurrence || "one_time",
-      notes: params.notes?.trim() || null,
+      notes: formattedNotes,
       created_at: nowIso,
       updated_at: nowIso,
     })
@@ -87,7 +97,7 @@ export async function recordVaultExpenseAction(params: RecordVaultExpenseParams)
     throw new Error(`Failed to log vault expense: ${insertError.message}`)
   }
 
-  // 4. Update savings_balance on households table
+  // 5. Update savings_balance on households table
   if (params.status === "paid") {
     const { error: updateError } = await supabase
       .from("households")
@@ -95,14 +105,16 @@ export async function recordVaultExpenseAction(params: RecordVaultExpenseParams)
       .eq("id", params.householdId)
 
     if (updateError) {
-      console.error("Warning: Expense logged but household balance update failed:", updateError.message)
+      console.error(
+        "Warning: Expense logged but household balance update failed:",
+        updateError.message
+      )
     }
   }
 
-  // 5. Revalidate cache
+  // 6. Revalidate cache across dashboard views
   revalidatePath("/dashboard")
-  revalidatePath("/dashboard/savings")
-  revalidatePath("/dashboard/savings/emergency-spend")
+  revalidatePath("/dashboard/emergency-spend")
 
   return { success: true, record }
 }

@@ -1,52 +1,78 @@
 // app/dashboard/savings/emergency-spend/_components/EmergencyCategoryTabs.tsx
 "use client"
 
-import { Filter } from "lucide-react"
+import { CheckCircle2, Clock } from "lucide-react"
 
-export type EmergencyCategoryTab = "all" | "medical" | "education" | "legal" | "home_repair"
+export type SpendViewTab = "settled" | "planned"
 
-interface CategoryTabsProps {
-  activeTab: EmergencyCategoryTab
-  onSelectTab: (tab: EmergencyCategoryTab) => void
+interface TabsProps {
+  activeTab: SpendViewTab
+  onSelectTab: (tab: SpendViewTab) => void
+  settledCount: number
+  plannedCount: number
 }
 
-const TABS: { id: EmergencyCategoryTab; label: string }[] = [
-  { id: "all", label: "All expenses" },
-  { id: "medical", label: "Medical" },
-  { id: "education", label: "Education" },
-  { id: "legal", label: "Legal" },
-  { id: "home_repair", label: "Home repair" },
-]
-
-export default function EmergencyCategoryTabs({ activeTab, onSelectTab }: CategoryTabsProps) {
+export default function EmergencyCategoryTabs({
+  activeTab,
+  onSelectTab,
+  settledCount,
+  plannedCount,
+}: TabsProps) {
   return (
     <div className="flex items-center justify-between gap-3 pt-1">
-      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.id
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onSelectTab(tab.id)}
-              className={`px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                isActive
-                  ? "bg-[#2d3436] text-white shadow-xs font-bold"
-                  : "bg-white text-gray-500 hover:text-[#2d3436] border border-gray-100"
-              }`}
-            >
-              {tab.label}
-            </button>
-          )
-        })}
-      </div>
+      <div className="flex items-center p-1 bg-gray-100/80 rounded-2xl border border-gray-200/50">
+        {/* Tab 1: Settled Outflows */}
+        <button
+          type="button"
+          onClick={() => onSelectTab("settled")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            activeTab === "settled"
+              ? "bg-white text-[#2d3436] shadow-sm"
+              : "text-gray-500 hover:text-[#2d3436]"
+          }`}
+        >
+          <CheckCircle2
+            size={14}
+            className={activeTab === "settled" ? "text-emerald-500" : "text-gray-400"}
+          />
+          <span>Settled Outflows</span>
+          <span
+            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+              activeTab === "settled"
+                ? "bg-gray-100 text-[#2d3436]"
+                : "bg-gray-200/70 text-gray-500"
+            }`}
+          >
+            {settledCount}
+          </span>
+        </button>
 
-      <button
-        type="button"
-        className="w-8 h-8 rounded-xl bg-white border border-gray-100 shadow-2xs flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors shrink-0"
-      >
-        <Filter size={13} strokeWidth={2} />
-      </button>
+        {/* Tab 2: Planned Reserves */}
+        <button
+          type="button"
+          onClick={() => onSelectTab("planned")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            activeTab === "planned"
+              ? "bg-white text-[#2d3436] shadow-sm"
+              : "text-gray-500 hover:text-[#2d3436]"
+          }`}
+        >
+          <Clock
+            size={14}
+            className={activeTab === "planned" ? "text-amber-500" : "text-gray-400"}
+          />
+          <span>Planned Reserves</span>
+          <span
+            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+              activeTab === "planned"
+                ? "bg-gray-100 text-[#2d3436]"
+                : "bg-gray-200/70 text-gray-500"
+            }`}
+          >
+            {plannedCount}
+          </span>
+        </button>
+      </div>
     </div>
   )
 }

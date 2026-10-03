@@ -55,6 +55,7 @@ export default function LogEmergencySpendModal({
       title: "",
       payee_name: "",
       category: "medical",
+      custom_category: "",
       amount: undefined,
       status: "paid",
       recurrence: "one_time",
@@ -71,11 +72,17 @@ export default function LogEmergencySpendModal({
   const onSubmit = async (data: EmergencyExpenseFormData) => {
     setServerError(null)
     try {
+      // If category is 'other', use the custom category value entered by the user
+      const finalCategory =
+        data.category.toLowerCase() === "other" && data.custom_category
+          ? data.custom_category.trim()
+          : data.category
+
       await recordVaultExpenseAction({
         householdId,
         title: data.title,
         payeeName: data.payee_name || null,
-        category: data.category,
+        category: finalCategory,
         amount: data.amount,
         status: data.status,
         dueDate: data.status === "planned" ? data.incurred_date : null,
@@ -120,7 +127,10 @@ export default function LogEmergencySpendModal({
         </div>
 
         {/* ── Scrollable Form Body ── */}
-        <form onSubmit={handleSubmit(onSubmit)} className="overflow-y-auto p-6 space-y-4 flex-1">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="overflow-y-auto p-6 space-y-4 flex-1"
+        >
           {serverError && (
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-100 text-xs font-medium text-[#e17055] flex items-center gap-2">
               <AlertCircle size={14} className="shrink-0" />
@@ -156,7 +166,10 @@ export default function LogEmergencySpendModal({
                   placeholder="e.g. Medicsi Hospital"
                   className="w-full pl-8 pr-3.5 py-2.5 bg-gray-50 border border-gray-200/80 rounded-xl text-xs font-semibold text-[#2d3436] focus:bg-white focus:border-emerald-600 outline-hidden transition-all"
                 />
-                <Building size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Building
+                  size={13}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
               </div>
               {errors.payee_name && (
                 <p className="text-[10px] text-rose-500 mt-1 font-medium">
@@ -178,7 +191,10 @@ export default function LogEmergencySpendModal({
                   <button
                     key={cat}
                     type="button"
-                    onClick={() => setValue("category", cat, { shouldValidate: true })}
+                    onClick={() => {
+                      setValue("category", cat, { shouldValidate: true })
+                      if (cat !== "other") setValue("custom_category", "")
+                    }}
                     className={`py-2 px-1 text-[11px] font-bold rounded-xl border capitalize transition-all ${
                       isSelected
                         ? "bg-emerald-600 border-emerald-600 text-white shadow-xs"
@@ -191,6 +207,30 @@ export default function LogEmergencySpendModal({
               })}
             </div>
           </div>
+
+          {/* ── Conditional 1-Word Custom Category Input ── */}
+          {currentCategory?.toLowerCase() === "other" && (
+            <div className="mt-2.5 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <label className="font-semibold text-emerald-700 text-[11px]">
+                  Custom 1-Word Category <span className="text-rose-500">*</span>
+                </label>
+                <span className="text-[10px] text-gray-400">
+                  e.g. Wedding, Travel, Appliance
+                </span>
+              </div>
+              <input
+                {...register("custom_category")}
+                placeholder="Enter single word (e.g. Wedding)"
+                className="w-full px-3.5 py-2 bg-emerald-50/40 border border-emerald-200 rounded-xl text-xs font-bold text-[#2d3436] focus:bg-white focus:border-emerald-600 outline-hidden transition-all placeholder:font-normal placeholder:text-gray-400"
+              />
+              {errors.custom_category && (
+                <p className="text-[10px] text-rose-500 mt-1 font-medium">
+                  {errors.custom_category.message}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Amount & Vault Balance Banner */}
           <div>
@@ -233,7 +273,9 @@ export default function LogEmergencySpendModal({
               <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-100 rounded-xl">
                 <button
                   type="button"
-                  onClick={() => setValue("status", "paid", { shouldValidate: true })}
+                  onClick={() =>
+                    setValue("status", "paid", { shouldValidate: true })
+                  }
                   className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
                     currentStatus === "paid"
                       ? "bg-white text-[#2d3436] shadow-xs"
@@ -244,7 +286,9 @@ export default function LogEmergencySpendModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setValue("status", "planned", { shouldValidate: true })}
+                  onClick={() =>
+                    setValue("status", "planned", { shouldValidate: true })
+                  }
                   className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
                     currentStatus === "planned"
                       ? "bg-white text-[#2d3436] shadow-xs"
@@ -266,7 +310,10 @@ export default function LogEmergencySpendModal({
                   {...register("incurred_date")}
                   className="w-full pl-8 pr-3.5 py-2 bg-gray-50 border border-gray-200/80 rounded-xl text-xs font-semibold text-[#2d3436] focus:bg-white focus:border-emerald-600 outline-hidden transition-all"
                 />
-                <Calendar size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Calendar
+                  size={13}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
               </div>
             </div>
           </div>
@@ -282,7 +329,10 @@ export default function LogEmergencySpendModal({
                 placeholder="e.g. Stomach flu consultation & tests"
                 className="w-full pl-8 pr-3.5 py-2.5 bg-gray-50 border border-gray-200/80 rounded-xl text-xs text-[#2d3436] placeholder-gray-400 focus:bg-white focus:border-emerald-600 outline-hidden transition-all"
               />
-              <FileText size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <FileText
+                size={13}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
             </div>
           </div>
 

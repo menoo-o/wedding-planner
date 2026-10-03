@@ -2,13 +2,13 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import type { EmergencySpendPageData } from "@/app/dashboard/_db/emergencySpend"
 import EmergencyBannerRail from "./EmergencyBannerRail"
 import EmergencyStatsRow from "./EmergencyStatsRow"
-import EmergencyCategoryTabs, { EmergencyCategoryTab } from "./EmergencyCategoryTabs"
+import EmergencyCategoryTabs, { SpendViewTab } from "./EmergencyCategoryTabs"
 import EmergencySpendLedger from "./EmergencySpendLedger"
 import LogEmergencySpendModal from "./LogEmergencySpendModal"
-import { useRouter } from "next/navigation"
 
 export default function EmergencySpendClientContainer({
   initialData,
@@ -19,13 +19,15 @@ export default function EmergencySpendClientContainer({
 }) {
   const router = useRouter()
   const [selectedYear, setSelectedYear] = useState<number>(initialData.selectedYear)
-  const [activeTab, setActiveTab] = useState<EmergencyCategoryTab>("all")
+  const [activeTab, setActiveTab] = useState<SpendViewTab>("settled")
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const filteredExpenses = initialData.expenses.filter((item) => {
-    if (activeTab === "all") return true
-    return item.category === activeTab
-  })
+  // Count items for each tab
+  const settledItems = initialData.expenses.filter((e) => e.status === "paid")
+  const plannedItems = initialData.expenses.filter((e) => e.status === "planned")
+
+  // Filter display based on selected tab
+  const displayedExpenses = activeTab === "settled" ? settledItems : plannedItems
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -39,11 +41,20 @@ export default function EmergencySpendClientContainer({
 
       <EmergencyStatsRow stats={initialData.stats} selectedYear={selectedYear} />
 
-      <EmergencyCategoryTabs activeTab={activeTab} onSelectTab={setActiveTab} />
+      <EmergencyCategoryTabs
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        settledCount={settledItems.length}
+        plannedCount={plannedItems.length}
+      />
 
-      <EmergencySpendLedger expenses={filteredExpenses} selectedYear={selectedYear} />
 
-      {/* Dedicated CTA Modal */}
+      <EmergencySpendLedger
+        expenses={displayedExpenses}
+        selectedYear={selectedYear}
+        isPlannedView={activeTab === "planned"}
+      />
+
       <LogEmergencySpendModal
         householdId={householdId}
         availableVaultBalance={initialData.stats.availableEmergencyBalance}
