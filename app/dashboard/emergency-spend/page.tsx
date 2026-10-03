@@ -38,7 +38,11 @@ async function EmergencySpendContent() {
 return (
     <div className="px-4 pt-1 pb-6 sm:px-8 sm:pt-2 sm:pb-8 max-w-7xl mx-auto space-y-3.5 sm:space-y-4">
       <EmergencySpendHeader />
-      <EmergencySpendClientContainer initialData={initialData} />
+      {/* update here, based on new props */}
+    <EmergencySpendClientContainer
+        initialData={initialData}
+        householdId={member.household_id}
+      />
     </div>
   )
 }
