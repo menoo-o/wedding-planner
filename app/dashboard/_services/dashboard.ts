@@ -104,7 +104,7 @@ export const getDashboardData = cache(async (): Promise<DashboardData> => {
       "cycle-scoped-fetch"
     )
   })
- 
+ // app/dashboard/_services/dashboard.ts snippet
   const [cyclePair, categories, savingsConfig, debtLedger, [currentTxs, prevExpenseTxs]] =
     await Promise.all([
       cyclePairPromise,

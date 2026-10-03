@@ -3,8 +3,8 @@
 import { 
   LifetimeDebtTransaction, 
   CycleCalculationTransaction, 
-  ReceivableRecord,
-  LoanStatus 
+  // ReceivableRecord,
+  // LoanStatus 
 } from "@/lib/types";
 
 // ── Interfaces ────────────────────────────────────────────────

@@ -1,17 +1,32 @@
-// app/emergency-spend/page.tsx
+// app/dashboard/savings/emergency-spend/page.tsx
+import { redirect } from "next/navigation"
+import { createClient } from "@/utils/supabase/server"
+import { getEmergencySpendData } from "@/app/dashboard/_db/emergencySpend"
+import EmergencySpendClientContainer from "@/app/dashboard/components/emergency-spend/EmergencySpendClientContainer"
+import EmergencySpendHeader from "@/app/dashboard/components/emergency-spend/EmergencySpendHeader"
 
 export default async function EmergencySpendPage() {
-  return (
-    <main className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-[#2d3436]">Emergency Spend</h1>
-      <p className="text-sm text-gray-500 mt-1">
-        Track and manage unexpected household expenses.
-      </p>
+  const supabase = await createClient()
 
-      {/* Your page content goes here */}
-      <div className="mt-6 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-        <p className="text-sm text-gray-600">Content loading...</p>
-      </div>
-    </main>
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect("/auth/login")
+
+  const { data: member } = await supabase
+    .from("household_members")
+    .select("household_id")
+    .eq("user_id", user.id)
+    .single()
+
+  if (!member) redirect("/dashboard")
+
+ const initialData = await getEmergencySpendData(member.household_id)
+
+  return (
+    <div className="px-4 py-4 sm:p-8 max-w-7xl mx-auto space-y-4 sm:space-y-6">
+      <EmergencySpendHeader />
+      <EmergencySpendClientContainer initialData={initialData} />
+    </div>
   )
 }
