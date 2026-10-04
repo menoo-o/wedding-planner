@@ -18,71 +18,77 @@ export default function EmergencyBannerRail({
   onYearChange,
   onAddExpense,
 }: BannerProps) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-2.5 sm:p-3 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-      {/* ── 1. Year Selector Pill ── */}
-      <div className="relative inline-flex items-center shrink-0">
-        <div className="flex items-center gap-2 px-3.5 py-2 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold text-[#2d3436]">
-          <Calendar size={14} className="text-gray-400" />
-          <select
-            value={selectedYear}
-            onChange={(e) => onYearChange(Number(e.target.value))}
-            className="bg-transparent pr-4 cursor-pointer outline-none appearance-none font-bold text-[#2d3436]"
-          >
-            {availableYears.map((yr) => (
-              <option key={yr} value={yr}>
-                {yr}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={13} className="text-gray-400 -ml-3 pointer-events-none" />
-        </div>
+  // app/dashboard/savings/emergency-spend/_components/EmergencyBannerRail.tsx
+return (
+  <div className="flex flex-col gap-3 rounded-2xl border border-gray-200/70 bg-white p-3 shadow-sm sm:p-4 lg:flex-row lg:items-center lg:gap-4">
+    {/* Mobile: year + CTA share the first row. Desktop: wrapper dissolves (lg:contents)
+        so year / total / CTA sit in one row via the order-* classes. */}
+    <div className="flex items-center justify-between gap-3 lg:contents">
+      {/* ── 1. Year Selector ── */}
+      <div className="relative inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-gray-200/70 bg-gray-50 px-3.5 text-xs font-semibold text-[#2d3436] focus-within:ring-2 focus-within:ring-[#8b9dc3]/40 lg:order-1">
+        <Calendar size={14} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+        <select
+          aria-label="Select year"
+          value={selectedYear}
+          onChange={(e) => onYearChange(Number(e.target.value))}
+          className="cursor-pointer appearance-none bg-transparent pr-5 font-semibold tabular-nums text-[#2d3436] outline-none"
+        >
+          {availableYears.map((yr) => (
+            <option key={yr} value={yr}>
+              {yr}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          size={13}
+          strokeWidth={1.5}
+          className="pointer-events-none absolute right-3 text-gray-400"
+        />
       </div>
 
-      {/* ── 2. All-Time Total Center Pill ── */}
-      <div className="flex items-center gap-3 px-4 py-1.5 border-y lg:border-y-0 lg:border-x border-gray-100/90 flex-1">
-        <div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
-          <Info size={14} />
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-              Total Emergency Spend (All time)
-            </span>
-            <span className="text-xs sm:text-sm font-bold text-[#2d3436]">
-              Rs {allTimeSpend.toLocaleString()}
-            </span>
-          </div>
-          <p className="text-[10px] text-gray-400 truncate mt-0.5">
-            This shows your total spending from the emergency fund across all years.
-          </p>
-        </div>
-      </div>
-
-      {/* ── 3. Dedicated Page-Specific CTA Button ── */}
+      {/* ── 3. CTA ── */}
       <button
         type="button"
         onClick={onAddExpense}
-        className="group relative inline-flex items-center justify-between gap-3 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl shadow-[0_2px_8px_rgba(5,150,105,0.25)] hover:shadow-[0_4px_12px_rgba(5,150,105,0.35)] transition-all active:scale-[0.98] shrink-0 text-left"
+        className="group inline-flex min-h-10 shrink-0 items-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-2 text-left text-white shadow-[0_2px_8px_rgba(5,150,105,0.25)] transition-all hover:from-emerald-700 hover:to-teal-700 hover:shadow-[0_4px_12px_rgba(5,150,105,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/50 focus-visible:ring-offset-2 active:scale-[0.98] lg:order-3"
       >
-        <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center text-white shrink-0 group-hover:rotate-12 transition-transform">
-            <ShieldAlert size={14} />
-          </div>
-          <div className="leading-tight">
-            <span className="block text-xs font-bold text-white tracking-wide">
-              Log Emergency Spend
-            </span>
-            <span className="block text-[10px] text-emerald-100/90">
-              Draw directly from Vault
-            </span>
-          </div>
-        </div>
-
-        <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-white ml-1">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white/20 transition-transform group-hover:rotate-12">
+          <ShieldAlert size={14} strokeWidth={1.8} />
+        </span>
+        <span className="leading-tight">
+          <span className="block text-xs font-semibold tracking-wide">
+            <span className="sm:hidden">Log Spend</span>
+            <span className="hidden sm:inline">Log Emergency Spend</span>
+          </span>
+          <span className="hidden text-[11px] text-emerald-50 sm:block">
+            Draw directly from Vault
+          </span>
+        </span>
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20">
           <Plus size={12} strokeWidth={2.5} />
-        </div>
+        </span>
       </button>
     </div>
-  )
-}
+
+    {/* ── 2. All-Time Total ── */}
+    <div className="flex min-w-0 flex-1 items-center gap-3 border-t border-gray-100 pt-3 lg:order-2 lg:border-x lg:border-t-0 lg:px-4 lg:pt-0">
+      <span className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-400 sm:flex">
+        <Info size={14} strokeWidth={1.5} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 sm:justify-start">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500">
+            <span className="sm:hidden">All-time spend</span>
+            <span className="hidden sm:inline">Total Emergency Spend (All time)</span>
+          </span>
+          <span className="text-sm font-semibold tabular-nums text-[#2d3436]">
+            Rs {allTimeSpend.toLocaleString()}
+          </span>
+        </div>
+        <p className="mt-0.5 hidden truncate text-[11px] text-gray-500 sm:block">
+          Total spent from the emergency fund across all years.
+        </p>
+      </div>
+    </div>
+  </div>
+)}

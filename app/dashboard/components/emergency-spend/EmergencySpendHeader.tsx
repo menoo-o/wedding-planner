@@ -1,13 +1,15 @@
 // app/dashboard/savings/emergency-spend/_components/EmergencySpendHeader.tsx
 export default function EmergencySpendHeader() {
   return (
-    <div className="pt-0">
-      <h1 className="text-xl sm:text-2xl font-bold text-[#2d3436] tracking-tight">
-        Emergency Spend
-      </h1>
-      <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5 leading-tight">
-        Track and manage unexpected household expenses.
-      </p>
-    </div>
+    <header className="flex min-h-[3rem] items-center justify-between">
+      <div className="max-w-[58%] lg:max-w-none">
+        <h1 className="text-xl font-semibold tracking-tight text-[#2d3436] sm:text-2xl">
+          Emergency Spend
+        </h1>
+        <p className="mt-0.5 text-[13px] text-gray-500 sm:text-sm">
+          Track and manage unexpected household expenses.
+        </p>
+      </div>
+    </header>
   )
 }
