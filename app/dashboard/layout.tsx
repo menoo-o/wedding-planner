@@ -8,6 +8,15 @@ import DashboardHeaderBar from "@/app/dashboard/components/Dashboardheaderbar"
 import ActionBarSkeleton from "@/app/dashboard/components/ActionBarSkeleton"
 import MobileBottomNav from "./components/MobileNav"
 import BrandLogo from "@/app/dashboard/components/BrandLogo"
+import { IBM_Plex_Sans } from "next/font/google"
+
+
+const plex = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-plex",
+  display: "swap",
+})
 
 // Note: getDashboardData() and getLiveServerLiquidity() no longer live here —
 // they moved into DashboardHeaderBar, which is the only part of this layout
@@ -16,7 +25,7 @@ import BrandLogo from "@/app/dashboard/components/BrandLogo"
 //app/dashboard/layout.tsx
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-     <div className="min-h-screen bg-[#f0f2f5] flex font-sans">
+     <div className="min-h-screen bg-[#f0f2f5] font-sans text-gray-900" style={{ fontFamily: plex.style.fontFamily }}>
       {/* Sidebar */}
      <aside className="hidden lg:flex w-56 bg-white flex-col fixed h-full border-r border-gray-100/50 z-40">
         {/* Logo */}

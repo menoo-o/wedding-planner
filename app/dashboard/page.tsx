@@ -139,106 +139,107 @@ async function DashboardContent() {
     </section>
 
     {/* ── Insight Cards ───────────────────────────────────── */}
-    <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-      {/* Credit & Debt */}
-      <div className={`${card} p-5 sm:p-6`}>
-        <h3 className={`${eyebrow} mb-4`}>Credit &amp; Debt</h3>
-        <dl className="divide-y divide-gray-100">
-          <div className="flex items-center justify-between py-3 first:pt-0">
-            <dt className="text-sm text-gray-600">Receivables</dt>
-            <dd className={`text-base font-semibold tabular-nums ${POS}`}>
-              +Rs {receivables.toLocaleString()}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between py-3">
-            <dt className="text-sm text-gray-600">Payables</dt>
-            <dd className={`text-base font-semibold tabular-nums ${NEG}`}>
-              -Rs {payables.toLocaleString()}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between py-3">
-            <dt className="text-sm text-gray-600">Net Position</dt>
-            <dd className="text-base font-semibold tabular-nums text-[#2d3436]">
-              {netDebt >= 0 ? "+" : ""}Rs {Math.abs(netDebt).toLocaleString()}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between py-3 last:pb-0">
-            <dt className="text-sm text-gray-600">Debt Load</dt>
-            <dd
-              className={`rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${
-                debtLoadRatio < 30
-                  ? "bg-emerald-50 text-[#008060]"
-                  : debtLoadRatio < 70
-                  ? "bg-amber-50 text-amber-700"
-                  : "bg-red-50 text-[#c2492f]"
-              }`}
-            >
-              {debtLoadRatio.toFixed(1)}% {debtLoadRatio < 30 ? "Safe" : debtLoadRatio < 70 ? "Medium" : "High"}
-            </dd>
-          </div>
-        </dl>
+{/* ── Insight Cards ───────────────────────────────────── */}
+<section className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+  {/* Credit & Debt */}
+  <div className={`${cardSurface} p-5 sm:p-6`}>
+    <h3 className={`${eyebrow} mb-4`}>Credit &amp; Debt</h3>
+    <dl className="divide-y divide-gray-100">
+      <div className="flex items-center justify-between py-3 first:pt-0">
+        <dt className="text-sm text-gray-600">Receivables</dt>
+        <dd className={`text-base font-semibold tabular-nums ${POS}`}>
+          +Rs {receivables.toLocaleString()}
+        </dd>
+      </div>
+      <div className="flex items-center justify-between py-3">
+        <dt className="text-sm text-gray-600">Payables</dt>
+        <dd className={`text-base font-semibold tabular-nums ${NEG}`}>
+          -Rs {payables.toLocaleString()}
+        </dd>
+      </div>
+      <div className="flex items-center justify-between py-3">
+        <dt className="text-sm text-gray-600">Net Position</dt>
+        <dd className="text-base font-semibold tabular-nums text-[#2d3436]">
+          {netDebt >= 0 ? "+" : ""}Rs {Math.abs(netDebt).toLocaleString()}
+        </dd>
+      </div>
+      <div className="flex items-center justify-between py-3 last:pb-0">
+        <dt className="text-sm text-gray-600">Debt Load</dt>
+        <dd
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${
+            debtLoadRatio < 30
+              ? "bg-emerald-50 text-[#008060]"
+              : debtLoadRatio < 70
+              ? "bg-amber-50 text-amber-700"
+              : "bg-red-50 text-[#c2492f]"
+          }`}
+        >
+          {debtLoadRatio.toFixed(1)}% {debtLoadRatio < 30 ? "Safe" : debtLoadRatio < 70 ? "Medium" : "High"}
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  {/* Velocity & Runway */}
+  <div className={`${cardSurface} p-5 sm:p-6`}>
+    <h3 className={`${eyebrow} mb-4`}>Velocity &amp; Runway</h3>
+    <div className="space-y-5">
+      <div>
+        <span className="mb-1 block text-sm text-gray-600">Monthly Burn</span>
+        <span className="text-lg font-semibold tabular-nums text-[#2d3436]">
+          ~Rs {Math.max(currentExpenses, previousExpenses).toLocaleString()}
+        </span>
+      </div>
+      <div>
+        <span className="mb-2 block text-sm text-gray-600">Spending Velocity</span>
+        <div className="h-2 w-full rounded-full bg-gray-100">
+          <div
+            className={`h-2 rounded-full transition-all ${
+              isBurningFaster ? "bg-[#e17055]" : "bg-[#00b894]"
+            }`}
+            style={{ width: `${Math.min(velocityRatio * 100, 100)}%` }}
+          />
+        </div>
+        <p className="mt-2 text-xs text-gray-500">
+          {isBurningFaster ? "Burning faster than last month" : "Under control"}
+        </p>
+      </div>
+      <div>
+        <span className="mb-1 block text-sm text-gray-600">Cash Runway</span>
+        <span className="flex items-center gap-2 text-lg font-semibold tabular-nums text-[#2d3436]">
+          <Clock size={16} strokeWidth={1.5} className="text-gray-400" />
+          {runway === Infinity ? "∞" : `${runway.toFixed(1)} months`}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  {/* Savings Vault */}
+  <div className="relative overflow-hidden rounded-2xl bg-[#2d3436] p-5 text-white shadow-sm sm:col-span-2 sm:p-6 lg:col-span-1">
+    <div className="absolute right-4 top-4 opacity-10">
+      <Shield size={64} strokeWidth={1} />
+    </div>
+    <div className="absolute bottom-0 right-0 -mb-10 -mr-10 h-32 w-32 rounded-full bg-white/5" />
+
+    <div className="relative">
+      <div className="flex items-center gap-2">
+        <Sparkles size={14} strokeWidth={1.5} className="text-gray-300" />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-300">
+          Savings Vault
+        </span>
       </div>
 
-      {/* Velocity & Runway */}
-      <div className={`${card} p-5 sm:p-6`}>
-        <h3 className={`${eyebrow} mb-4`}>Velocity &amp; Runway</h3>
-        <div className="space-y-5">
-          <div>
-            <span className="mb-1 block text-sm text-gray-600">Monthly Burn</span>
-            <span className="text-lg font-semibold tabular-nums text-[#2d3436]">
-              ~Rs {Math.max(currentExpenses, previousExpenses).toLocaleString()}
-            </span>
-          </div>
-          <div>
-            <span className="mb-2 block text-sm text-gray-600">Spending Velocity</span>
-            <div className="h-2 w-full rounded-full bg-gray-100">
-              <div
-                className={`h-2 rounded-full transition-all ${
-                  isBurningFaster ? "bg-[#e17055]" : "bg-[#00b894]"
-                }`}
-                style={{ width: `${Math.min(velocityRatio * 100, 100)}%` }}
-              />
-            </div>
-            <p className="mt-2 text-xs text-gray-500">
-              {isBurningFaster ? "Burning faster than last month" : "Under control"}
-            </p>
-          </div>
-          <div>
-            <span className="mb-1 block text-sm text-gray-600">Cash Runway</span>
-            <span className="flex items-center gap-2 text-lg font-semibold tabular-nums text-[#2d3436]">
-              <Clock size={16} strokeWidth={1.5} className="text-gray-400" />
-              {runway === Infinity ? "∞" : `${runway.toFixed(1)} months`}
-            </span>
-          </div>
-        </div>
-      </div>
+      <p className="mb-1 mt-5 text-sm text-gray-300">{walletName || "Emergency Fund"}</p>
+      <p className="text-3xl font-semibold tracking-tight tabular-nums">
+        Rs {savingsBalance.toLocaleString()}
+      </p>
 
-      {/* Savings Vault */}
-      <div className="relative overflow-hidden rounded-2xl bg-[#2d3436] p-5 text-white shadow-sm sm:col-span-2 sm:p-6 lg:col-span-1">
-        <div className="absolute right-4 top-4 opacity-10">
-          <Shield size={64} strokeWidth={1} />
-        </div>
-        <div className="absolute bottom-0 right-0 -mb-10 -mr-10 h-32 w-32 rounded-full bg-white/5" />
-
-        <div className="relative">
-          <div className="flex items-center gap-2">
-            <Sparkles size={14} strokeWidth={1.5} className="text-gray-300" />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-300">
-              Savings Vault
-            </span>
-          </div>
-
-          <p className="mb-1 mt-5 text-sm text-gray-300">{walletName || "Emergency Fund"}</p>
-          <p className="text-3xl font-semibold tracking-tight tabular-nums">
-            Rs {savingsBalance.toLocaleString()}
-          </p>
-
-          <button className="mt-6 w-full rounded-xl bg-white/10 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
-            Manage Vault
-          </button>
-        </div>
-      </div>
-    </section>
+      <button className="mt-6 w-full rounded-xl bg-white/10 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+        Manage Vault
+      </button>
+    </div>
+  </div>
+</section>
 
     {/* ── Recent Activity + Spending Analysis ─────────────── */}
     <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
@@ -320,8 +321,12 @@ async function DashboardContent() {
 
 
 const card = "bg-white rounded-2xl border border-gray-200/70 shadow-sm"
-const cardHover = `${card} transition-shadow hover:shadow-md`
+
+// const cardHover = `${card} transition-shadow hover:shadow-md`
 const eyebrow = "text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500"
 const stat = "text-xl sm:text-2xl font-semibold tracking-tight tabular-nums"
 const POS = "text-[#008060]" // readable green for text (keep #00b894 for fills)
 const NEG = "text-[#c2492f]" // readable red for text (keep #e17055 for fills)
+
+const cardSurface = "bg-white rounded-2xl border border-gray-200/70 shadow-sm"
+const cardHover = `${cardSurface} transition-shadow hover:shadow-md`

@@ -53,40 +53,42 @@ export default function LiquidityCard({
   const [transferOpen, setTransferOpen] = useState(false)
   const router = useRouter()
   
-
+//liquidity card
   return (
     <>
-      <div
-        className={`relative bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow ${className}`}
-      >
-        <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
-          <div className="flex items-center gap-2 text-gray-400">
-            <Wallet size={14} strokeWidth={1.5} />
-            <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">
-              Liquidity
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setTransferOpen(true)}
-            aria-label="Transfer funds"
-            title="Transfer funds"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#8b9dc3]/10 hover:text-[#8b9dc3]"
-          >
-            <ArrowLeftRight size={14} strokeWidth={1.8} />
-          </button>
+    <div
+      className={`relative rounded-2xl border border-gray-200/70 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-6 ${className}`}
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-gray-400">
+          <Wallet size={14} strokeWidth={1.5} className="shrink-0" />
+          <span className="text-[11px] font-semibold uppercase leading-snug tracking-[0.12em] text-gray-500">
+            Liquidity
+          </span>
         </div>
 
-        <p className="text-xl sm:text-2xl font-bold text-[#2d3436]">Rs {total.toLocaleString()}</p>
-
-        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
-          <span>Cash: Rs {cash.toLocaleString()}</span>
-          <span className="hidden sm:inline">·</span>
-          <span>Card: Rs {card.toLocaleString()}</span>
-        </div>
+        <button
+          type="button"
+          onClick={() => setTransferOpen(true)}
+          aria-label="Transfer funds"
+          title="Transfer funds"
+          className="-my-1.5 -mr-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#8b9dc3]/10 hover:text-[#6f84b0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8b9dc3]/50"
+        >
+          <ArrowLeftRight size={14} strokeWidth={1.8} />
+        </button>
       </div>
 
+      <p className="text-xl font-semibold tracking-tight tabular-nums text-[#2d3436] sm:text-2xl">
+        Rs {total.toLocaleString()}
+      </p>
+
+      <div className="mt-2 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-gray-500">
+        <span>Cash: Rs {cash.toLocaleString()}</span>
+        <span aria-hidden className="hidden sm:inline">·</span>
+        <span>Card: Rs {card.toLocaleString()}</span>
+      </div>
+    </div>
+    
       <TransferModal
         isOpen={transferOpen}
         onClose={() => setTransferOpen(false)}
