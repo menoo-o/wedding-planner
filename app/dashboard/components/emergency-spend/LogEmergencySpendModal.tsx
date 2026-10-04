@@ -298,7 +298,7 @@ return (
             </div>
 
             {/* ── Notes (full width) ── */}
-            <div className="md:col-span-2">
+            {/* <div className="md:col-span-2">
               <label htmlFor="ls-notes" className={fieldLabel}>
                 Notes <span className="font-normal normal-case tracking-normal">(optional)</span>
               </label>
@@ -308,7 +308,7 @@ return (
                 placeholder="e.g. Stomach flu consultation & tests"
                 className={fieldBase}
               />
-            </div>
+            </div> */}
           </div>
         </div>
 
