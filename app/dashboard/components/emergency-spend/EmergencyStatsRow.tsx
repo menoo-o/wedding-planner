@@ -1,7 +1,12 @@
 // app/dashboard/savings/emergency-spend/_components/EmergencyStatsRow.tsx
-"use client"
+import type { LucideIcon } from "lucide-react"
+import { AlertTriangle, CreditCard, TrendingUp, Wallet } from "lucide-react"
 
-import { Wallet, TrendingUp, CreditCard, AlertTriangle, ChevronRight } from "lucide-react"
+const eyebrow =
+  "text-[11px] font-semibold uppercase leading-snug tracking-[0.12em] text-gray-500"
+const valueCls =
+  "text-xl font-semibold leading-9 tracking-tight tabular-nums sm:text-[28px]"
+const caption = "mt-2 text-xs text-gray-500 sm:mt-3"
 
 interface StatsProps {
   stats: {
@@ -16,109 +21,108 @@ interface StatsProps {
   selectedYear: number
 }
 
-export default function EmergencyStatsRow({ stats, selectedYear }: StatsProps) {
+function KpiCard({
+  label,
+  Icon,
+  iconTone,
+  barTone,
+  children,
+}: {
+  label: string
+  Icon: LucideIcon
+  iconTone: string
+  barTone: string
+  children: React.ReactNode
+}) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
-      {/* ── 1. Emergency Fund ── */}
-      <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-gray-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between group cursor-pointer">
-        <div>
-          <div className="flex items-center justify-between text-gray-400 mb-1.5">
-            <div className="w-7 h-7 rounded-xl bg-emerald-50 text-[#00b894] flex items-center justify-center">
-              <Wallet size={14} strokeWidth={2.2} />
-            </div>
-            <span className="text-[10px] font-bold tracking-wider text-[#00b894] uppercase">
-              Emergency Fund
-            </span>
-            <ChevronRight size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
-          </div>
-          <p className="text-lg sm:text-2xl font-bold text-[#2d3436] tracking-tight mt-2">
-            Rs {stats.availableEmergencyBalance.toLocaleString()}
-          </p>
-          <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">Available balance</p>
-        </div>
-        <div className="w-full bg-emerald-500 h-1 rounded-full mt-3" />
+    <div className="flex flex-col rounded-2xl border border-gray-200/70 bg-white p-4 shadow-sm sm:p-6">
+      {/* Header: title left, icon badge right */}
+      <div className="flex min-h-8 items-center justify-between gap-2 sm:min-h-10">
+        <span className={eyebrow}>{label}</span>
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-10 sm:w-10 ${iconTone}`}
+        >
+          <Icon size={16} strokeWidth={1.8} />
+        </span>
       </div>
+
+      <div className="mt-3 sm:mt-4">{children}</div>
+
+      <div className={`mt-4 h-1 rounded-full sm:mt-5 ${barTone}`} />
+    </div>
+  )
+}
+
+export default function EmergencyStatsRow({ stats, selectedYear }: StatsProps) {
+  const delta = Number(stats.yearOverYearDelta) || 0
+  const deltaTone =
+    delta === 0 ? "text-gray-500" : delta < 0 ? "text-[#008060]" : "text-[#c2492f]"
+  const deltaArrow = delta === 0 ? "" : delta < 0 ? "▼ " : "▲ "
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      {/* ── 1. Emergency Fund ── */}
+      <KpiCard
+        label="Emergency Fund"
+        Icon={Wallet}
+        iconTone="bg-emerald-50 text-emerald-600"
+        barTone="bg-emerald-500"
+      >
+        <p className={`${valueCls} text-[#2d3436]`}>
+          Rs {stats.availableEmergencyBalance.toLocaleString()}
+        </p>
+        <p className={caption}>Available balance</p>
+      </KpiCard>
 
       {/* ── 2. Spent in Year ── */}
-      <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-gray-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between group cursor-pointer">
-        <div>
-          <div className="flex items-center justify-between text-gray-400 mb-1.5">
-            <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
-              <TrendingUp size={14} strokeWidth={2.2} />
-            </div>
-            <span className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-              Spent in {selectedYear}
-            </span>
-            <ChevronRight size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+      <KpiCard
+        label={`Spent in ${selectedYear}`}
+        Icon={TrendingUp}
+        iconTone="bg-blue-50 text-blue-600"
+        barTone="bg-blue-500"
+      >
+        <p className={`${valueCls} text-[#2d3436]`}>
+          Rs {stats.spentInYear.toLocaleString()}
+        </p>
+        <p className={`${caption} font-medium ${deltaTone}`}>
+          {deltaArrow}
+          {Math.abs(delta)}% vs last year
+        </p>
+      </KpiCard>
+
+      {/* ── 3. Entries (Settled vs Planned) ── */}
+      <KpiCard
+        label="Entries"
+        Icon={CreditCard}
+        iconTone="bg-purple-50 text-purple-600"
+        barTone="bg-purple-200"
+      >
+        <div className="grid grid-cols-2 divide-x divide-gray-100">
+          <div>
+            <p className={`${valueCls} text-[#2d3436]`}>{stats.paidExpensesCount}</p>
+            <p className={caption}>Settled</p>
           </div>
-          <p className="text-lg sm:text-2xl font-bold text-[#2d3436] tracking-tight mt-2">
-            Rs {stats.spentInYear.toLocaleString()}
-          </p>
-          <p className="text-[10px] sm:text-xs font-semibold text-emerald-600 mt-0.5 flex items-center gap-1">
-            <span>▼</span> vs last year ({stats.yearOverYearDelta}%)
-          </p>
-        </div>
-        <div className="w-full bg-blue-500 h-1 rounded-full mt-3" />
-      </div>
-
-      {/* ── 3. Style B: Dual-Column Split (Entries: Settled vs Planned) ── */}
-      <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-gray-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between group cursor-pointer">
-        <div>
-          <div className="flex items-center justify-between text-gray-400 mb-1.5">
-            <div className="w-7 h-7 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center">
-              <CreditCard size={14} strokeWidth={2.2} />
-            </div>
-            <span className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-              Entries
-            </span>
-            <ChevronRight size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
-          </div>
-
-          <div className="grid grid-cols-2 divide-x divide-gray-100 gap-2 mt-2">
-            <div>
-              <p className="text-lg sm:text-2xl font-bold text-[#2d3436] tracking-tight">
-                {stats.paidExpensesCount}
-              </p>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-tight mt-0.5">
-                Settled
-              </p>
-            </div>
-
-            <div className="pl-3">
-              <p className="text-lg sm:text-2xl font-bold text-amber-600 tracking-tight">
-                {stats.plannedCount}
-              </p>
-              <p className="text-[10px] font-semibold text-amber-600/80 uppercase tracking-tight mt-0.5">
-                Planned
-              </p>
-            </div>
+          <div className="pl-3 sm:pl-5">
+            <p className={`${valueCls} text-amber-600`}>{stats.plannedCount}</p>
+            <p className={`${caption} text-amber-700`}>Planned</p>
           </div>
         </div>
-
-        <div className="w-full bg-purple-500 h-1 rounded-full mt-3 opacity-30" />
-      </div>
+      </KpiCard>
 
       {/* ── 4. Largest Expense ── */}
-      <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-gray-100/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col justify-between group cursor-pointer">
-        <div>
-          <div className="flex items-center justify-between text-gray-400 mb-1.5">
-            <div className="w-7 h-7 rounded-xl bg-rose-50 text-[#e17055] flex items-center justify-center">
-              <AlertTriangle size={14} strokeWidth={2.2} />
-            </div>
-            <span className="text-[10px] font-bold tracking-wider text-[#e17055] uppercase">
-              Largest Expense
-            </span>
-            <ChevronRight size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
-          </div>
-          <p className="text-lg sm:text-2xl font-bold text-[#e17055] tracking-tight mt-2">
-            -Rs {stats.largestExpenseAmount.toLocaleString()}
-          </p>
-          <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 truncate">
-            {stats.largestExpenseTitle || "No expenses yet"}
-          </p>
-        </div>
-        <div className="w-full bg-[#e17055] h-1 rounded-full mt-3" />
-      </div>
+      <KpiCard
+        label="Largest Expense"
+        Icon={AlertTriangle}
+        iconTone="bg-red-50 text-[#c2492f]"
+        barTone="bg-[#e17055]"
+      >
+        <p className={`${valueCls} text-[#c2492f]`}>
+          -Rs {stats.largestExpenseAmount.toLocaleString()}
+        </p>
+        <p className={`${caption} truncate`}>
+          {stats.largestExpenseTitle || "No expenses yet"}
+        </p>
+      </KpiCard>
     </div>
   )
 }
