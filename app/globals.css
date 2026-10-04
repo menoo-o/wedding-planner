@@ -111,6 +111,8 @@
 --color-outline-variant: var(--outline-variant);
    --icon-lg: var(--text-icon);
 
+     --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+
 
   /* OPTIONAL: add more as needed */
 

@@ -58,28 +58,24 @@ async function DashboardContent() {
  //dashboard/page.tsx
  return (
     <>
-      {/* dashboard main pg */}
-     <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-6 lg:px-0">
-      
-      {/* ── Top Bar ──────────────────────────────────────────── */}
-    <div className="flex items-center justify-between mb-6 sm:mb-8 min-h-[3rem]">
+   <div className="mx-auto max-w-7xl space-y-8 px-4 pb-8 sm:px-6 lg:px-0">
+    {/* ── Top Bar ─────────────────────────────────────────── */}
+    <header className="flex min-h-[3rem] items-center justify-between">
       <div className="max-w-[58%] lg:max-w-none">
-        <h1 className="text-xl sm:text-2xl font-bold text-[#2d3436]">Dashboard</h1>
-        <p className="text-xs sm:text-sm text-gray-400 mt-0.5">Welcome back to your household ledger</p>
+        <h1 className="text-xl font-semibold tracking-tight text-[#2d3436] sm:text-2xl">
+          Dashboard
+        </h1>
+        <p className="mt-0.5 text-[13px] text-gray-500 sm:text-sm">
+          Welcome back to your household ledger
+        </p>
       </div>
-    </div>
+    </header>
 
-      {/* ── Financial Snapshot ───────────────────────────────── */}
-      {/* ... rest of your snapshot cards stay the same ... */}
-      <div className="mb-2">
-        <h2 className="text-[11px] font-bold tracking-[0.15em] text-gray-400 uppercase mb-4">
-          Financial Snapshot
-        </h2>
-      </div>
+    {/* ── Financial Snapshot ──────────────────────────────── */}
+    <section aria-labelledby="snapshot-heading" className="space-y-3 sm:space-y-4">
+      <h2 id="snapshot-heading" className={eyebrow}>Financial Snapshot</h2>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        {/* Liquidity */}
-  
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <LiquidityCard
           cash={cash}
           card={card}
@@ -88,22 +84,18 @@ async function DashboardContent() {
           savingsBalance={savingsBalance}
           householdId={householdMember?.household_id}
           currentCycleId={currentCycleId ?? null}
-          // createdBy={createdBy}
-          // showToast={showToast}
         />
- 
 
-  
         {/* This Month Spend */}
-        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-gray-400 mb-2 sm:mb-3">
-            <TrendingDown size={14} strokeWidth={1.5} />
-            <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">This Month Spend</span>
+        <div className={`${cardHover} p-4 sm:p-6`}>
+          <div className="mb-3 flex items-center gap-2 text-gray-400">
+            <TrendingDown size={14} strokeWidth={1.5} className="shrink-0" />
+            <span className={`${eyebrow} leading-snug`}>This Month Spend</span>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-[#e17055]">-Rs {monthlyExpenses.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-2">
+          <p className={`${stat} ${NEG}`}>-Rs {monthlyExpenses.toLocaleString()}</p>
+          <p className="mt-2 text-xs text-gray-500">
             {previousExpenses > 0 ? (
-              <span className={isBurningFaster ? "text-[#e17055]" : "text-[#00b894]"}>
+              <span className={`font-medium ${isBurningFaster ? NEG : POS}`}>
                 {isBurningFaster ? "▲" : "▼"} {Math.abs((velocityRatio - 1) * 100).toFixed(1)}% vs last month
               </span>
             ) : (
@@ -113,160 +105,170 @@ async function DashboardContent() {
         </div>
 
         {/* Obligations */}
-        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-gray-400 mb-2 sm:mb-3">
-            <Scale size={14} strokeWidth={1.5} />
-            <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">Obligations</span>
+        <div className={`${cardHover} p-4 sm:p-6`}>
+          <div className="mb-3 flex items-center gap-2 text-gray-400">
+            <Scale size={14} strokeWidth={1.5} className="shrink-0" />
+            <span className={`${eyebrow} leading-snug`}>Obligations</span>
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-[#2d3436]">{obligationCount}</p>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-400">
+          <p className={`${stat} text-[#2d3436]`}>{obligationCount}</p>
+          <div className="mt-2 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-gray-500">
             <span>{receivablesRecords.length} receivable{receivablesRecords.length !== 1 ? "s" : ""}</span>
-            <span className="hidden sm:inline">·</span>
+            <span aria-hidden className="hidden sm:inline">·</span>
             <span>{payablesRecords.length} payable{payablesRecords.length !== 1 ? "s" : ""}</span>
           </div>
         </div>
 
         {/* Net Debt */}
-        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100/80 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2 text-gray-400 mb-2 sm:mb-3">
+        <div className={`${cardHover} p-4 sm:p-6`}>
+          <div className="mb-3 flex items-center gap-2 text-gray-400">
             {netDebt >= 0 ? (
-              <ArrowUpRight size={14} strokeWidth={1.5} className="text-[#00b894]" />
+              <ArrowUpRight size={14} strokeWidth={1.5} className={`shrink-0 ${POS}`} />
             ) : (
-              <ArrowDownRight size={14} strokeWidth={1.5} className="text-[#e17055]" />
+              <ArrowDownRight size={14} strokeWidth={1.5} className={`shrink-0 ${NEG}`} />
             )}
-            <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-gray-400">Net Debt</span>
+            <span className={`${eyebrow} leading-snug`}>Net Debt</span>
           </div>
-          <p className={`text-xl sm:text-2xl font-bold ${netDebt >= 0 ? "text-[#00b894]" : "text-[#e17055]"}`}>
+          <p className={`${stat} ${netDebt >= 0 ? POS : NEG}`}>
             {netDebt >= 0 ? "+" : "-"}Rs {Math.abs(netDebt).toLocaleString()}
           </p>
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="mt-2 text-xs text-gray-500">
             {netDebt >= 0 ? "You're owed money" : "You owe money"}
           </p>
         </div>
       </div>
+    </section>
 
-      {/* ── Insight Cards Row ────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 sm:mb-8">
-        {/* Credit & Debt */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm">
-          <h3 className="text-[10px] font-bold tracking-[0.15em] text-gray-400 uppercase mb-5">
-            Credit & Debt
-          </h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-gray-50">
-              <span className="text-sm text-gray-500">Receivables</span>
-              <span className="text-base font-bold text-[#00b894]">+Rs {receivables.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center pb-3 border-b border-gray-50">
-              <span className="text-sm text-gray-500">Payables</span>
-              <span className="text-base font-bold text-[#e17055]">-Rs {payables.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center pb-3 border-b border-gray-50">
-              <span className="text-sm text-gray-500">Net Position</span>
-              <span className="text-base font-bold text-[#2d3436]">
-                {netDebt >= 0 ? "+" : ""}Rs {Math.abs(netDebt).toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500">Debt Load</span>
-              <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${
+    {/* ── Insight Cards ───────────────────────────────────── */}
+    <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+      {/* Credit & Debt */}
+      <div className={`${card} p-5 sm:p-6`}>
+        <h3 className={`${eyebrow} mb-4`}>Credit &amp; Debt</h3>
+        <dl className="divide-y divide-gray-100">
+          <div className="flex items-center justify-between py-3 first:pt-0">
+            <dt className="text-sm text-gray-600">Receivables</dt>
+            <dd className={`text-base font-semibold tabular-nums ${POS}`}>
+              +Rs {receivables.toLocaleString()}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between py-3">
+            <dt className="text-sm text-gray-600">Payables</dt>
+            <dd className={`text-base font-semibold tabular-nums ${NEG}`}>
+              -Rs {payables.toLocaleString()}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between py-3">
+            <dt className="text-sm text-gray-600">Net Position</dt>
+            <dd className="text-base font-semibold tabular-nums text-[#2d3436]">
+              {netDebt >= 0 ? "+" : ""}Rs {Math.abs(netDebt).toLocaleString()}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between py-3 last:pb-0">
+            <dt className="text-sm text-gray-600">Debt Load</dt>
+            <dd
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${
                 debtLoadRatio < 30
-                  ? "bg-[#e8f5e9] text-[#00b894]"
+                  ? "bg-emerald-50 text-[#008060]"
                   : debtLoadRatio < 70
-                  ? "bg-[#fff3e0] text-[#fdcb6e]"
-                  : "bg-[#ffebee] text-[#e17055]"
-              }`}>
-                {debtLoadRatio.toFixed(1)}% {debtLoadRatio < 30 ? "Safe" : debtLoadRatio < 70 ? "Medium" : "High"}
-              </span>
+                  ? "bg-amber-50 text-amber-700"
+                  : "bg-red-50 text-[#c2492f]"
+              }`}
+            >
+              {debtLoadRatio.toFixed(1)}% {debtLoadRatio < 30 ? "Safe" : debtLoadRatio < 70 ? "Medium" : "High"}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      {/* Velocity & Runway */}
+      <div className={`${card} p-5 sm:p-6`}>
+        <h3 className={`${eyebrow} mb-4`}>Velocity &amp; Runway</h3>
+        <div className="space-y-5">
+          <div>
+            <span className="mb-1 block text-sm text-gray-600">Monthly Burn</span>
+            <span className="text-lg font-semibold tabular-nums text-[#2d3436]">
+              ~Rs {Math.max(currentExpenses, previousExpenses).toLocaleString()}
+            </span>
+          </div>
+          <div>
+            <span className="mb-2 block text-sm text-gray-600">Spending Velocity</span>
+            <div className="h-2 w-full rounded-full bg-gray-100">
+              <div
+                className={`h-2 rounded-full transition-all ${
+                  isBurningFaster ? "bg-[#e17055]" : "bg-[#00b894]"
+                }`}
+                style={{ width: `${Math.min(velocityRatio * 100, 100)}%` }}
+              />
             </div>
+            <p className="mt-2 text-xs text-gray-500">
+              {isBurningFaster ? "Burning faster than last month" : "Under control"}
+            </p>
+          </div>
+          <div>
+            <span className="mb-1 block text-sm text-gray-600">Cash Runway</span>
+            <span className="flex items-center gap-2 text-lg font-semibold tabular-nums text-[#2d3436]">
+              <Clock size={16} strokeWidth={1.5} className="text-gray-400" />
+              {runway === Infinity ? "∞" : `${runway.toFixed(1)} months`}
+            </span>
           </div>
         </div>
+      </div>
 
-        {/* Velocity & Runway */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm">
-          <h3 className="text-[10px] font-bold tracking-[0.15em] text-gray-400 uppercase mb-5">
-            Velocity & Runway
-          </h3>
-          <div className="space-y-5">
-            <div>
-              <span className="text-sm text-gray-500 block mb-1">Monthly Burn</span>
-              <span className="text-lg font-bold text-[#2d3436]">
-                ~Rs {Math.max(currentExpenses, previousExpenses).toLocaleString()}
-              </span>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500 block mb-2">Spending Velocity</span>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all ${
-                    isBurningFaster ? "bg-[#e17055]" : "bg-[#00b894]"
-                  }`}
-                  style={{ width: `${Math.min(velocityRatio * 100, 100)}%` }}
-                />
-              </div>
-              <p className="text-[11px] text-gray-400 mt-1.5">
-                {isBurningFaster ? "Burning faster than last month" : "Under control"}
-              </p>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500 block mb-1">Cash Runway</span>
-              <span className="text-lg font-bold text-[#2d3436] flex items-center gap-2">
-                <Clock size={16} strokeWidth={1.5} className="text-gray-400" />
-                {runway === Infinity ? "∞" : `${runway.toFixed(1)} months`}
-              </span>
-            </div>
-          </div>
+      {/* Savings Vault */}
+      <div className="relative overflow-hidden rounded-2xl bg-[#2d3436] p-5 text-white shadow-sm sm:col-span-2 sm:p-6 lg:col-span-1">
+        <div className="absolute right-4 top-4 opacity-10">
+          <Shield size={64} strokeWidth={1} />
         </div>
+        <div className="absolute bottom-0 right-0 -mb-10 -mr-10 h-32 w-32 rounded-full bg-white/5" />
 
-        {/* Savings Vault */}
-        <div className="bg-[#2d3436] rounded-2xl p-6 text-white relative overflow-hidden shadow-sm sm:col-span-2 lg:col-span-1">
-          <div className="absolute top-4 right-4 opacity-10">
-            <Shield size={64} strokeWidth={1} />
+        <div className="relative">
+          <div className="flex items-center gap-2">
+            <Sparkles size={14} strokeWidth={1.5} className="text-gray-300" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-300">
+              Savings Vault
+            </span>
           </div>
-          <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mb-10" />
-          
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles size={14} strokeWidth={1.5} className="text-gray-400" />
-            <span className="text-[10px] font-bold tracking-[0.15em] text-gray-400 uppercase">Savings Vault</span>
-          </div>
-          
-          <p className="text-sm text-gray-300 mt-4 mb-1">{walletName || "Emergency Fund"}</p>
-          <p className="text-3xl font-bold">Rs {savingsBalance.toLocaleString()}</p>
-          
-          <button className="mt-6 w-full py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-medium text-white/80 transition-colors">
+
+          <p className="mb-1 mt-5 text-sm text-gray-300">{walletName || "Emergency Fund"}</p>
+          <p className="text-3xl font-semibold tracking-tight tabular-nums">
+            Rs {savingsBalance.toLocaleString()}
+          </p>
+
+          <button className="mt-6 w-full rounded-xl bg-white/10 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
             Manage Vault
           </button>
         </div>
       </div>
+    </section>
 
-      {/* ── Recent Activity + Spending Analysis ──────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Recent Activity */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[11px] font-bold tracking-[0.15em] text-gray-400 uppercase">
-              Recent Activity
-            </h2>
-            <Link
-              href="/dashboard/expenses"
-              className="text-xs font-medium text-gray-400 hover:text-[#8b9dc3] flex items-center gap-1 transition-colors"
-            >
-              View All <ChevronRight size={14} strokeWidth={1.5} />
-            </Link>
-          </div>
-          <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-hidden overflow-x-auto">
+    {/* ── Recent Activity + Spending Analysis ─────────────── */}
+    <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+      {/* Recent Activity */}
+      <div className="space-y-3 lg:col-span-2">
+        <div className="flex h-5 items-center justify-between">
+          <h2 className={eyebrow}>Recent Activity</h2>
+          <Link
+            href="/dashboard/expenses"
+            className="flex items-center gap-1 text-xs font-medium text-gray-500 transition-colors hover:text-[#6f84b0]"
+          >
+            View All <ChevronRight size={14} strokeWidth={1.5} />
+          </Link>
+        </div>
+        <div className={`${card} overflow-hidden`}>
+          <div className="overflow-x-auto">
             <RecentExpenses
               transactions={expensesWithCategoryNames as unknown as ExpenseTransaction[]}
               currentExpensesTotal={currentExpenses}
             />
           </div>
         </div>
+      </div>
 
-        {/* Spending Analysis */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 shadow-sm">
-          <h3 className="text-[10px] font-bold tracking-[0.15em] text-gray-400 uppercase mb-5">
-            Spending Analysis
-          </h3>
+      {/* Spending Analysis */}
+      <div className="space-y-3">
+        <div className="flex h-5 items-center">
+          <h2 className={eyebrow}>Spending Analysis</h2>
+        </div>
+        <div className={`${card} p-5 sm:p-6`}>
           <div className="space-y-5">
             {(() => {
               const categoryTotals = new Map<string, number>()
@@ -277,21 +279,29 @@ async function DashboardContent() {
               const sorted = Array.from(categoryTotals.entries())
                 .sort((a, b) => b[1] - a[1])
                 .slice(0, 5)
-              const total = currentExpenses || 1
+              const spendTotal = currentExpenses || 1
+              const colors = ["#6f84b0", "#8b9dc3", "#a3b3d3", "#bccae2", "#d0d9ea"]
+
+              if (sorted.length === 0) {
+                return <p className="text-sm text-gray-500">No spending yet this cycle</p>
+              }
 
               return sorted.map(([name, amount], i) => {
-                const pct = (amount / total) * 100
-                const colors = ["#8b9dc3", "#a8b8d8", "#c5d1e8", "#d5dde8", "#e8ecf2"]
+                const pct = (amount / spendTotal) * 100
                 return (
                   <div key={name}>
-                    <div className="flex justify-between text-xs mb-2">
-                      <span className="text-gray-500 font-medium uppercase tracking-wider text-[10px]">{name}</span>
-                      <span className="font-bold text-[#2d3436]">{pct.toFixed(0)}%</span>
+                    <div className="mb-2 flex items-baseline justify-between gap-3">
+                      <span className="truncate text-[11px] font-medium uppercase tracking-wider text-gray-600">
+                        {name}
+                      </span>
+                      <span className="text-xs font-semibold tabular-nums text-[#2d3436]">
+                        {pct.toFixed(0)}%
+                      </span>
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                    <div className="h-1.5 w-full rounded-full bg-gray-100">
                       <div
                         className="h-1.5 rounded-full transition-all"
-                       style={{ width: `${pct}%`, backgroundColor: colors[i] || colors[4] }}
+                        style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: colors[i] ?? colors[4] }}
                       />
                     </div>
                   </div>
@@ -301,7 +311,17 @@ async function DashboardContent() {
           </div>
         </div>
       </div>
-    </div>
+    </section>
+  </div>
   </>
   )
 }
+
+
+
+const card = "bg-white rounded-2xl border border-gray-200/70 shadow-sm"
+const cardHover = `${card} transition-shadow hover:shadow-md`
+const eyebrow = "text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500"
+const stat = "text-xl sm:text-2xl font-semibold tracking-tight tabular-nums"
+const POS = "text-[#008060]" // readable green for text (keep #00b894 for fills)
+const NEG = "text-[#c2492f]" // readable red for text (keep #e17055 for fills)
