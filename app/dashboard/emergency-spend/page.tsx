@@ -34,15 +34,14 @@ async function EmergencySpendContent() {
   if (!member) redirect("/dashboard")
 
   const initialData = await getEmergencySpendData(member.household_id)
-
+// app/dashboard/savings/emergency-spend/page.tsx
 return (
-    <div className="px-4 pt-1 pb-6 sm:px-8 sm:pt-2 sm:pb-8 max-w-7xl mx-auto space-y-3.5 sm:space-y-4">
-      <EmergencySpendHeader />
-      {/* update here, based on new props */}
+    <div className="mx-auto max-w-7xl space-y-8 px-4 pb-8 sm:px-6 lg:px-0">
+    <EmergencySpendHeader />
     <EmergencySpendClientContainer
-        initialData={initialData}
-        householdId={member.household_id}
-      />
-    </div>
+      initialData={initialData}
+      householdId={member.household_id}
+    />
+  </div>
   )
 }

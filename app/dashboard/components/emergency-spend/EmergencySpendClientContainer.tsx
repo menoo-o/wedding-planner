@@ -30,7 +30,8 @@ export default function EmergencySpendClientContainer({
   const displayedExpenses = activeTab === "settled" ? settledItems : plannedItems
 
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <>
+     <div className="space-y-6">
       <EmergencyBannerRail
         selectedYear={selectedYear}
         availableYears={initialData.availableYears}
@@ -40,7 +41,7 @@ export default function EmergencySpendClientContainer({
       />
 
       <EmergencyStatsRow stats={initialData.stats} selectedYear={selectedYear} />
-
+   <div className="space-y-4"> 
       <EmergencyCategoryTabs
         activeTab={activeTab}
         onSelectTab={setActiveTab}
@@ -54,7 +55,8 @@ export default function EmergencySpendClientContainer({
         selectedYear={selectedYear}
         isPlannedView={activeTab === "planned"}
       />
-
+      </div>
+  </div>
       <LogEmergencySpendModal
         householdId={householdId}
         availableVaultBalance={initialData.stats.availableEmergencyBalance}
@@ -62,6 +64,6 @@ export default function EmergencySpendClientContainer({
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => router.refresh()}
       />
-    </div>
+    </>
   )
 }
