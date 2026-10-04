@@ -84,7 +84,7 @@ export default function LogEmergencySpendModal({
         payeeName: data.payee_name || null,
        category: data.category, // <-- Stays typed as VaultExpenseCategory
        customCategory: data.category === "other" ? data.custom_category : null, // <-- Pass the 1-word string here
-      amount: data.amount,
+       amount: data.amount,
         status: data.status,
         dueDate: data.status === "planned" ? data.incurred_date : null,
         recurrence: data.recurrence,

@@ -1,4 +1,3 @@
-// app/dashboard/_db/emergencySpend.ts
 import { cache } from "react"
 import { createClient } from "@/utils/supabase/server"
 import type { VaultExpenseCategory } from "@/app/dashboard/_db/vaultExpenses"
@@ -27,9 +26,9 @@ export interface EmergencySpendPageData {
   stats: {
     availableEmergencyBalance: number
     spentInYear: number
-    yearOverYearDelta: number // percentage
-    expensesCount: number
-    categoryCountsText: string // e.g. "1 medical • 1 education • 1 legal"
+    yearOverYearDelta: number
+    paidExpensesCount: number
+    plannedCount: number
     largestExpenseAmount: number
     largestExpenseTitle: string | null
   }
@@ -40,18 +39,18 @@ export const getEmergencySpendData = cache(
   async (householdId: string, targetYear = new Date().getFullYear()): Promise<EmergencySpendPageData> => {
     const supabase = await createClient()
 
-  // 1. Fetch available Emergency Fund balance directly from households
-  const { data: householdRow, error: hhErr } = await supabase
-    .from("households")
-    .select("savings_balance, savings_wallet_name")
-    .eq("id", householdId)
-    .single()
+    // 1. Fetch available Emergency Fund balance directly from households
+    const { data: householdRow, error: hhErr } = await supabase
+      .from("households")
+      .select("savings_balance, savings_wallet_name")
+      .eq("id", householdId)
+      .single()
 
-  if (hhErr) {
-    console.error("Failed to load household vault balance:", hhErr.message)
-  }
+    if (hhErr) {
+      console.error("Failed to load household vault balance:", hhErr.message)
+    }
 
-  const availableEmergencyBalance = Number(householdRow?.savings_balance) || 0
+    const availableEmergencyBalance = Number(householdRow?.savings_balance) || 0
 
     // 2. Fetch all expenses for this household
     const { data: allRawTxs } = await supabase
@@ -70,73 +69,66 @@ export const getEmergencySpendData = cache(
       if (!isNaN(yr)) yearsSet.add(yr)
     }
     const availableYears = Array.from(yearsSet).sort((a, b) => b - a)
+
     let allTimeTotalSpend = 0
     let spentInYear = 0
-    let spentPrevYear = 0 // <-- Ensure this is declared
+    let spentPrevYear = 0
     let largestExpenseAmount = 0
     let largestExpenseTitle: string | null = null
 
     const yearItems: EmergencySpendRow[] = []
-    const categoryCountMap: Record<string, number> = {}
-    let paidExpensesCount = 0 // <── Tracks ONLY settled/paid items
+    let paidExpensesCount = 0
+    let plannedCount = 0
 
-for (const r of allRecords) {
-  const amt = Number(r.amount) || 0
-  const yr = new Date(r.created_at).getFullYear()
+    for (const r of allRecords) {
+      const amt = Number(r.amount) || 0
+      const yr = new Date(r.created_at).getFullYear()
 
-  if (r.status === "paid") {
-    allTimeTotalSpend += amt
+      if (r.status === "paid") {
+        allTimeTotalSpend += amt
 
-    if (yr === targetYear) {
-      spentInYear += amt
-      paidExpensesCount += 1
+        if (yr === targetYear) {
+          spentInYear += amt
+          paidExpensesCount += 1
 
-      // Category counters for settled expenses
-      categoryCountMap[r.category] = (categoryCountMap[r.category] || 0) + 1
-
-      // Track largest single hit
-      if (amt > largestExpenseAmount) {
-        largestExpenseAmount = amt
-        largestExpenseTitle = r.title
+          // Track largest hit in target year
+          if (amt > largestExpenseAmount) {
+            largestExpenseAmount = amt
+            largestExpenseTitle = r.title
+          }
+        } else if (yr === targetYear - 1) {
+          spentPrevYear += amt
+        }
+      } else if (r.status === "planned" && yr === targetYear) {
+        plannedCount += 1
       }
-    } else if (yr === targetYear - 1) {
-      spentPrevYear += amt // <-- Tracks previous year's total
+
+      // Include all expenses (settled & planned) for current target year
+      if (yr === targetYear) {
+        yearItems.push(r)
+      }
     }
-  }
 
-  // Include both paid and planned in the selected year's list
-  if (yr === targetYear) {
-    yearItems.push(r)
-  }
-}
+    // 4. Calculate Year-Over-Year Delta
+    let yearOverYearDelta = 0
+    if (spentPrevYear > 0) {
+      yearOverYearDelta = Math.round(((spentInYear - spentPrevYear) / spentPrevYear) * 100)
+    }
 
-// ── Declare and compute yearOverYearDelta here ──
-let yearOverYearDelta = 0
-if (spentPrevYear > 0) {
-  yearOverYearDelta = Math.round(((spentInYear - spentPrevYear) / spentPrevYear) * 100)
-}
-
-// Category breakdown string
-const categoryParts = Object.entries(categoryCountMap)
-  .slice(0, 3)
-  .map(([cat, count]) => `${count} ${cat}`)
-const categoryCountsText =
-  categoryParts.length > 0 ? categoryParts.join(" • ") : "No settled expenses"
-
-return {
-  selectedYear: targetYear,
-  availableYears,
-  allTimeTotalSpend,
-  stats: {
-    availableEmergencyBalance,
-    spentInYear,
-    yearOverYearDelta, // <-- Now properly in scope
-    expensesCount: paidExpensesCount,
-    categoryCountsText,
-    largestExpenseAmount,
-    largestExpenseTitle,
-  },
-  expenses: yearItems,
- }
+    return {
+      selectedYear: targetYear,
+      availableYears,
+      allTimeTotalSpend,
+      stats: {
+        availableEmergencyBalance,
+        spentInYear,
+        yearOverYearDelta,
+        paidExpensesCount,
+        plannedCount,
+        largestExpenseAmount,
+        largestExpenseTitle,
+      },
+      expenses: yearItems,
+    }
   }
 )
