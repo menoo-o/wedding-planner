@@ -18,61 +18,64 @@ export default function EmergencyCategoryTabs({
   settledCount,
   plannedCount,
 }: TabsProps) {
-  return (
-    <div className="flex items-center justify-between gap-3 pt-1">
-      <div className="flex items-center p-1 bg-gray-100/80 rounded-2xl border border-gray-200/50">
-        {/* Tab 1: Settled Outflows */}
-        <button
-          type="button"
-          onClick={() => onSelectTab("settled")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === "settled"
-              ? "bg-white text-[#2d3436] shadow-sm"
-              : "text-gray-500 hover:text-[#2d3436]"
-          }`}
-        >
-          <CheckCircle2
-            size={14}
-            className={activeTab === "settled" ? "text-emerald-500" : "text-gray-400"}
-          />
-          <span>Settled Outflows</span>
-          <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === "settled"
-                ? "bg-gray-100 text-[#2d3436]"
-                : "bg-gray-200/70 text-gray-500"
-            }`}
-          >
-            {settledCount}
-          </span>
-        </button>
+return (
+  <div
+    role="tablist"
+    aria-label="Emergency spend categories"
+    className="grid w-full grid-cols-2 gap-1 rounded-2xl border border-gray-200/70 bg-gray-100/80 p-1 sm:inline-flex sm:w-auto"
+  >
+    {tabs.map(({ id, label, shortLabel, Icon, activeIcon }) => {
+      const isActive = activeTab === id
+      const count = id === "settled" ? settledCount : plannedCount
 
-        {/* Tab 2: Planned Reserves */}
+      return (
         <button
+          key={id}
           type="button"
-          onClick={() => onSelectTab("planned")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === "planned"
-              ? "bg-white text-[#2d3436] shadow-sm"
-              : "text-gray-500 hover:text-[#2d3436]"
+          role="tab"
+          aria-selected={isActive}
+          onClick={() => onSelectTab(id)}
+          className={`flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-[13px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8b9dc3]/50 sm:px-4 ${
+            isActive
+              ? "border-gray-200/70 bg-white text-[#2d3436] shadow-sm"
+              : "border-transparent text-gray-600 hover:text-[#2d3436]"
           }`}
         >
-          <Clock
+          <Icon
             size={14}
-            className={activeTab === "planned" ? "text-amber-500" : "text-gray-400"}
+            strokeWidth={1.8}
+            className={`shrink-0 ${isActive ? activeIcon : "text-gray-400"}`}
           />
-          <span>Planned Reserves</span>
+          <span className="sm:hidden">{shortLabel}</span>
+          <span className="hidden sm:inline">{label}</span>
           <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === "planned"
-                ? "bg-gray-100 text-[#2d3436]"
-                : "bg-gray-200/70 text-gray-500"
+            className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums leading-none ${
+              isActive ? "bg-gray-100 text-[#2d3436]" : "bg-gray-200/70 text-gray-600"
             }`}
           >
-            {plannedCount}
+            {count}
           </span>
         </button>
-      </div>
-    </div>
-  )
+      )
+    })}
+  </div>
+)
 }
+
+
+const tabs = [
+  {
+    id: "settled",
+    label: "Settled Outflows",
+    shortLabel: "Settled",
+    Icon: CheckCircle2,
+    activeIcon: "text-emerald-600",
+  },
+  {
+    id: "planned",
+    label: "Planned Reserves",
+    shortLabel: "Planned",
+    Icon: Clock,
+    activeIcon: "text-amber-600",
+  },
+] as const
