@@ -2,8 +2,19 @@
 // import { createClient } from "@/utils/supabase/server"
 import { getPublicFeedback } from "./actions"
 import FeedbackClientWorkspace from "@/app/dashboard/components/FeedbackClientWorkspace"
+import {Suspense} from "react"
 
-export default async function FeedbackPage() {
+export default async function FeedbackPage(){
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <FeedbackContent />
+    </Suspense>
+  )
+}
+
+
+
+async function FeedbackContent() {
   const initialItems = await getPublicFeedback()
 
   return (
