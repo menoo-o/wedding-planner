@@ -13,7 +13,7 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react"
-import { submitFeedbackAction, type FeedbackItem } from "../actions"
+import { submitFeedbackAction, type FeedbackItem } from "@/app/dashboard/feedback/actions"
 
 type FeedbackType = "suggestion" | "bug_report" | "general"
 
