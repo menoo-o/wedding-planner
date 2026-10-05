@@ -10,10 +10,11 @@ import {
   HandCoins,
   PiggyBank,
   MoreHorizontal,
-  BarChart3,
-  Store,
+  // BarChart3,
+  // Store,
   Settings,
   LogOut,
+  NotebookPen,
 } from "lucide-react"
 
 type TabItem = { label: string; href: string; icon: ReactNode }
@@ -31,9 +32,9 @@ const TABS: TabItem[] = [
 // Everything that lives behind "More". Analytics is included so it isn't
 // orphaned on mobile now that it's not one of the four main tabs.
 const MORE_ITEMS: MoreItem[] = [
-  { label: "Analytics", hint: "Trends and reports", href: "/dashboard/analytics", icon: <BarChart3 size={18} strokeWidth={1.5} /> },
-  { label: "Vendors", hint: "People and shops you pay", href: "/dashboard/vendors", icon: <Store size={18} strokeWidth={1.5} /> },
-  { label: "Settings", hint: "Account and preferences", href: "/dashboard/settings", icon: <Settings size={18} strokeWidth={1.5} /> },
+  { label: "Feedback", hint: "Things-to-do", href: "/dashboard/feedback", icon: <NotebookPen size={18} strokeWidth={1.5} /> },
+  // { label: "Vendors", hint: "People and shops you pay", href: "/dashboard/vendors", icon: <Store size={18} strokeWidth={1.5} /> },
+  { label: "Settings", hint: "Account and preferences", href: "/dashboard", icon: <Settings size={18} strokeWidth={1.5} /> },
 ]
 
 async function handleLogout() {
