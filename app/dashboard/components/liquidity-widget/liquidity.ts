@@ -16,10 +16,10 @@ export const getLiveServerLiquidity = cache(async (householdId: string) => {
     return { cash: 0, card: 0, total: 0, monthlyExpenses: 0, cycleId: null };
   }
 
-  // 2. Fetch all transactions logged within this active cycle
+  // 2. Fetch all transactions logged within this active cycle (include notes)
   const { data: transactions } = await supabase
     .from('transactions')
-    .select('amount, payment_account, transaction_type, description')
+    .select('amount, payment_account, transaction_type, description, notes')
     .eq('cycle_id', cycle.id);
 
   // 3. Set starting baselines
@@ -33,8 +33,22 @@ export const getLiveServerLiquidity = cache(async (householdId: string) => {
   // 4. Run ledger arithmetic
   transactions?.forEach((tx) => {
     const val = parseFloat(tx.amount || '0');
-    const isAddition = ['top_up', 'loan_return', 'loan_in'].includes(tx.transaction_type);
-    const isDeduction = ['expense', 'settlement', 'loan_out'].includes(tx.transaction_type);
+
+    // Determine direction for repayments / settlements
+    const isInflowSettlement =
+      ['settlement', 'loan_return'].includes(tx.transaction_type) &&
+      tx.notes?.includes('[inflow]');
+
+    const isOutflowSettlement =
+      ['settlement', 'loan_return'].includes(tx.transaction_type) &&
+      !isInflowSettlement; // default to outflow if not marked [inflow]
+
+    // Base classifications
+    const isAddition =
+      ['top_up', 'loan_in'].includes(tx.transaction_type) || isInflowSettlement;
+
+    const isDeduction =
+      ['expense', 'loan_out'].includes(tx.transaction_type) || isOutflowSettlement;
 
     const isPaidExpense = tx.transaction_type === 'expense' && tx.payment_account !== null;
     const isPendingVendorExpense = tx.transaction_type === 'expense' && tx.payment_account === null;

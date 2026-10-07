@@ -3,8 +3,6 @@
 import { 
   LifetimeDebtTransaction, 
   CycleCalculationTransaction, 
-  // ReceivableRecord,
-  // LoanStatus 
 } from "@/lib/types";
 
 // ── Interfaces ────────────────────────────────────────────────
@@ -20,10 +18,18 @@ export interface DebtResult {
   payables: number;
 }
 
+// Helper to determine whether a repayment/settlement brings cash in or sends cash out
+function isSettlementInflow(tx: { transaction_type: string; notes?: string | null }) {
+  if (tx.transaction_type === "settlement" || tx.transaction_type === "loan_return") {
+    return Boolean(tx.notes?.includes("[inflow]"));
+  }
+  return false;
+}
+
 // ── computeBalances ───────────────────────────────────────────
 
 export function computeBalances(
-  transactions: CycleCalculationTransaction[],
+  transactions: (CycleCalculationTransaction & { notes?: string | null })[],
   openingBalance: number
 ): BalanceResult {
   let cashBalance = openingBalance;
@@ -31,21 +37,33 @@ export function computeBalances(
   let currentExpenses = 0;
 
   for (const tx of transactions) {
-    const amt = tx.amount;
+    const amt = Number(tx.amount) || 0;
+    const isInflow = isSettlementInflow(tx);
 
-    // Inflows
-    if (["top_up", "loan_return", "loan_in"].includes(tx.transaction_type)) {
-      if (tx.payment_account === "cash") cashBalance += amt;
-      if (tx.payment_account === "card") cardBalance += amt;
+    // Inflows (money entering pocket/card)
+    const isAddition =
+      ["top_up", "loan_in", "income"].includes(tx.transaction_type) ||
+      isInflow;
+
+    // Outflows (money leaving pocket/card)
+    const isDeduction =
+      ["expense", "loan_out"].includes(tx.transaction_type) ||
+      (["settlement", "loan_return"].includes(tx.transaction_type) && !isInflow);
+
+    if (tx.payment_account === "cash") {
+      if (isAddition) cashBalance += amt;
+      if (isDeduction) cashBalance -= amt;
+    } else if (tx.payment_account === "card") {
+      if (isAddition) cardBalance += amt;
+      if (isDeduction) cardBalance -= amt;
     }
-    // Outflows
-    else if (["expense", "settlement", "loan_out"].includes(tx.transaction_type)) {
-      if (tx.payment_account === "cash") cashBalance -= amt;
-      if (tx.payment_account === "card") cardBalance -= amt;
-      if (tx.transaction_type === "expense") currentExpenses += amt;
+
+    if (tx.transaction_type === "expense") {
+      currentExpenses += amt;
     }
-    // Internal vault transfer
-    else if (tx.transaction_type === "transfer") {
+
+    // Internal vault transfers
+    if (tx.transaction_type === "transfer") {
       const sig = tx.description?.toLowerCase() ?? "";
       const isIn = sig.includes("transfer in");
       const isOut = sig.includes("transfer out");
@@ -67,7 +85,6 @@ export function computeBalances(
 export function computeLifetimeDebt(
   transactions: LifetimeDebtTransaction[]
 ): DebtResult {
-  // 1. Inlined single-pass map for repayments
   const repaymentsMap = new Map<string, number>();
   for (const tx of transactions) {
     if (
@@ -82,7 +99,6 @@ export function computeLifetimeDebt(
   let receivables = 0;
   let payables = 0;
 
-  // 2. Compute outstanding active debts
   for (const tx of transactions) {
     if (tx.transaction_type === "loan_return" || tx.transaction_type === "settlement") continue;
     if (tx.loan_status === "settled") continue;
@@ -124,75 +140,79 @@ export function computeDebtLoadRatio(
   return payables > 0 ? 100 : 0;
 }
 
-// app/dashboard/_lib/finance.ts
-// Moved out of _db/ — this is now pure computation (same category as
-// computeBalances), not I/O. It takes the cycle + transactions the caller
-// already fetched instead of re-querying Supabase for rows that were
-// already pulled in getDashboardData's Stage 3 batch.
+// ── computeLiveLiquidity ──────────────────────────────────────
 
-// app/dashboard/_lib/finance.ts
 type CycleRow = {
-  id: string
-  opening_cash_balance: string | number | null | undefined
-  opening_bank_balance: string | number | null | undefined
-}
+  id: string;
+  opening_cash_balance: string | number | null | undefined;
+  opening_bank_balance: string | number | null | undefined;
+};
 
 type LiquidityTransaction = {
-  amount: string | number | null
-  payment_account: string | null
-  transaction_type: string
-  description: string | null
-}
+  amount: string | number | null;
+  payment_account: string | null;
+  transaction_type: string;
+  description: string | null;
+  notes?: string | null; // <-- Added notes support
+};
 
 export function computeLiveLiquidity(
   cycle: CycleRow | null,
   transactions: LiquidityTransaction[]
 ) {
   if (!cycle) {
-    return { cash: 0, card: 0, total: 0, monthlyExpenses: 0, cycleId: null }
+    return { cash: 0, card: 0, total: 0, monthlyExpenses: 0, cycleId: null };
   }
 
-  const openingCash = parseFloat(String(cycle.opening_cash_balance ?? "0"))
-  const openingBank = parseFloat(String(cycle.opening_bank_balance ?? "0"))
+  const openingCash = parseFloat(String(cycle.opening_cash_balance ?? "0"));
+  const openingBank = parseFloat(String(cycle.opening_bank_balance ?? "0"));
 
-  let cashChange = 0
-  let bankChange = 0
-  let accumulatedExpenses = 0
+  let cashChange = 0;
+  let bankChange = 0;
+  let accumulatedExpenses = 0;
 
   transactions.forEach((tx) => {
-    const val = parseFloat(String(tx.amount ?? "0"))
-    const isAddition = ["top_up", "loan_return", "loan_in"].includes(tx.transaction_type)
-    const isDeduction = ["expense", "settlement", "loan_out"].includes(tx.transaction_type)
+    const val = parseFloat(String(tx.amount ?? "0"));
+    if (isNaN(val) || val <= 0) return;
 
-    const isPaidExpense = tx.transaction_type === "expense" && tx.payment_account !== null
-    const isPendingVendorExpense = tx.transaction_type === "expense" && tx.payment_account === null
+    const isInflow = isSettlementInflow(tx);
 
-    if (isPaidExpense || isPendingVendorExpense) {
-      accumulatedExpenses += val
+    // Inflows
+    const isAddition =
+      ["top_up", "loan_in", "income"].includes(tx.transaction_type) ||
+      isInflow;
+
+    // Outflows
+    const isDeduction =
+      ["expense", "loan_out"].includes(tx.transaction_type) ||
+      (["settlement", "loan_return"].includes(tx.transaction_type) && !isInflow);
+
+    if (tx.transaction_type === "expense") {
+      accumulatedExpenses += val;
     }
 
     // Cash interactions
     if (tx.payment_account === "cash") {
-      if (isAddition) cashChange += val
-      if (isDeduction) cashChange -= val
+      if (isAddition) cashChange += val;
+      if (isDeduction) cashChange -= val;
       if (tx.transaction_type === "transfer") {
-        if (tx.description?.startsWith("Transfer in")) cashChange += val
-        if (tx.description?.startsWith("Transfer out")) cashChange -= val
+        if (tx.description?.startsWith("Transfer in")) cashChange += val;
+        if (tx.description?.startsWith("Transfer out")) cashChange -= val;
       }
     }
     // Bank Card interactions
     else if (tx.payment_account === "card") {
-      if (isAddition) bankChange += val
-      if (isDeduction) bankChange -= val
+      if (isAddition) bankChange += val;
+      if (isDeduction) bankChange -= val;
       if (tx.transaction_type === "transfer") {
-        if (tx.description?.startsWith("Transfer in")) bankChange += val
-        if (tx.description?.startsWith("Transfer out")) bankChange -= val
+        if (tx.description?.startsWith("Transfer in")) bankChange += val;
+        if (tx.description?.startsWith("Transfer out")) bankChange -= val;
       }
     }
-  })
+  });
 
-  const finalCash = openingCash + cashChange
-  const finalBank = openingBank + bankChange
+  const finalCash = openingCash + cashChange;
+  const finalBank = openingBank + bankChange;
 
   return {
     cash: finalCash,
@@ -200,5 +220,5 @@ export function computeLiveLiquidity(
     total: finalCash + finalBank,
     monthlyExpenses: accumulatedExpenses,
     cycleId: cycle.id,
-  }
+  };
 }
