@@ -45,7 +45,7 @@ export async function recordRepaymentAction({
     .from("transactions")
     .select("amount")
     .eq("related_transaction_id", parentDebtId)
-    .in("transaction_type", ["loan_return", "settlement"])
+    .in("transaction_type", ["loan_return", "settlement", "reimbursement_settlement"])
 
   if (childErr) {
     throw new Error(childErr.message)
@@ -69,20 +69,27 @@ export async function recordRepaymentAction({
 
   const nextRemaining = Math.max(0, currentRemaining - cleanRepayAmount)
   const isSettled = nextRemaining <= 0.001
-  const childTransactionType = isSettled ? "settlement" : "loan_return"
   const nowIso = new Date().toISOString()
+
+  // ── Determine Cash Movement Direction ──
+  // loan_out (you lent) or expense reimbursement -> Money comes IN
+  // loan_in (you borrowed) -> Money goes OUT
+  const isMoneyReceiving = parent.transaction_type === "loan_out" || parent.transaction_type === "expense"
 
   // 3. Insert child repayment transaction
   const { error: insertErr } = await supabase.from("transactions").insert({
     household_id: parent.household_id,
     cycle_id: parent.cycle_id,
     created_by: parent.created_by,
-    transaction_type: childTransactionType,
+    transaction_type: isSettled ? "settlement" : "loan_return",
     counterparty_name: parent.counterparty_name,
     amount: cleanRepayAmount,
     payment_account: paymentAccount,
     related_transaction_id: parent.id,
-    notes: notes?.trim() || null,
+    // Tag the direction in notes/metadata so any ledger query knows if this was an inflow or outflow
+    notes: notes?.trim() 
+      ? `[${isMoneyReceiving ? "inflow" : "outflow"}] ${notes.trim()}`
+      : `[${isMoneyReceiving ? "inflow" : "outflow"}]`,
     created_at: nowIso,
     cleared_at: isSettled ? nowIso : null,
   })
@@ -114,5 +121,6 @@ export async function recordRepaymentAction({
 
   // 5. Revalidate cache
   revalidatePath("/dashboard/debts")
+  revalidatePath("/dashboard")
   return { success: true, isSettled, nextRemaining }
 }
