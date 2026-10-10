@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useToastStore } from "@/store/useToastStore"
+import { useToastStore } from "@/store/Usetoaststore"
 
 export default function NetworkToast() {
   const { message, type, isVisible, hideToast } = useToastStore()
