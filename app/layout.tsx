@@ -4,8 +4,8 @@ import type { Metadata } from "next"
 import { IBM_Plex_Sans } from "next/font/google"
 import "./globals.css"
 
-import NetworkListener from "@/components/NetworkStatus/useNetworkStatus"
-import NetworkToast from "@/components/NetworkStatus/NetworkToast"
+import NetworkListener from "@/components/NetworkStatus/NetworkListen"
+import NetworkToast from "@/components/NetworkStatus/Networktoast"
 
 const plex = IBM_Plex_Sans({
   subsets: ["latin"],
