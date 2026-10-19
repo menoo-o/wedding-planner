@@ -12,7 +12,7 @@ import {
   Clock,
 } from "lucide-react"
 
-import ExpenseRowItem from "../components/ExpenseRowItem" // 
+import ExpenseRowItem from "@/app/dashboard/components/ExpenseRowItem"
 
 import { getDashboardData } from '../_services/dashboard'
 import { getPrevCycleExpenses, getCycleTransactions } from "../_db/transactions"
