@@ -4,7 +4,7 @@
 import { useState } from "react"
 import { X, Loader2 } from "lucide-react"
 import type { ExpenseTransaction } from "../_lib/utils" //[cite: 16]
-import { updateExpenseAction } from "../actions"
+import { updateExpenseAction } from "../expenses/actions"
 
 interface EditModalProps {
   isOpen: boolean
