@@ -255,3 +255,24 @@ export interface ExpenseTransaction {
   loan_status?: "pending" | "partial" | "settled" | null
   reimbursement_status?: "pending" | "partial" | "settled" | null
 }
+
+// types/transactionActions.ts
+export interface CycleCapability {
+  activeCycleId: string | null
+  isCycleOpen: boolean
+}
+
+export interface TransactionModalProps {
+  mode: "create" | "edit"
+  initialData?: {
+    id: string
+    transaction_type: string
+    amount: number
+    description: string
+    payment_account: "cash" | "card"
+    category_id?: string
+    notes?: string
+  }
+  isOpen: boolean
+  onClose: () => void
+}

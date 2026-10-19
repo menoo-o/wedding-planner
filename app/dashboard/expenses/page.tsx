@@ -8,9 +8,11 @@ import ExpensesSkeleton from '@/app/dashboard/components/ExpensePgSkeleton'
 import {
   TrendingDown,
   Scale,
-  ChevronRight,
+  // ChevronRight,
   Clock,
 } from "lucide-react"
+
+import ExpenseRowItem from "../components/ExpenseRowItem" // 
 
 import { getDashboardData } from '../_services/dashboard'
 import { getPrevCycleExpenses, getCycleTransactions } from "../_db/transactions"
@@ -104,8 +106,13 @@ async function ExpensesContent({
   }))
 
   // Determine which cycle to show
-  const selectedCycleId = params.cycle || currentCycleId
-  const isCurrentCycle = selectedCycleId === currentCycleId
+  // Around line 98 in app/dashboard/expenses/page.tsx
+const selectedCycleId = params.cycle || currentCycleId
+const isCurrentCycle = selectedCycleId === currentCycleId
+
+
+const selectedCycle = cycles.find((c) => c.id === selectedCycleId) || monthlyCycle
+const isCycleOpen = !selectedCycle?.is_closed
 
   // Fetch transactions for the selected cycle
   let cycleTransactions = rawTransactions
@@ -370,82 +377,31 @@ const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
       {/* ── Expense List Grouped by Day ──────────────────────── */}
       <div className="space-y-6">
         {groupedExpenses.map((day) => (
-          <div key={day.date}>
-            {/* Date Header */}
-            <div className="flex items-center justify-between mb-3 px-1">
-              <h3 className="text-sm font-semibold text-[#2d3436]">{day.label}</h3>
-              <span className="text-sm font-medium text-[#e17055]">
-                -Rs {day.dayTotal.toLocaleString()}
-              </span>
-            </div>
-
-            {/* Transaction Cards */}
-            <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-hidden">
-              {day.transactions.map((tx, i) => (
-                <div
-                  key={tx.id}
-                  className={`flex items-center justify-between px-5 py-4 ${
-                    i !== day.transactions.length - 1 ? "border-b border-gray-50" : ""
-                  } hover:bg-gray-50/50 transition-colors cursor-pointer group`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: `color-mix(in srgb, ${getCategoryColor(tx.category_name)} 15%, transparent)`,
-                        color: getCategoryColor(tx.category_name),
-                      }}
-                    >
-                      {getCategoryIcon(tx.category_name)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-[#2d3436]">
-                        {tx.description || tx.category_name}
-                      </p>
-                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                  <span className="text-xs text-gray-400 capitalize lg:uppercase tracking-wider truncate">
-                    {tx.category_name}
-                  </span>
-                  <span className="sm:inline text-gray-300">|</span>
-                  {/* <span className="hidden sm:inline text-xs text-gray-400">
-                    {new Date(tx.created_at).toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}
-                  </span> */}
-                  {/* <span className="text-gray-300">·</span> */}
-                  <span className="text-xs text-gray-400 capitalize">
-                    {tx.payment_account}
-                  </span>
-                  {tx.reimbursement_status === "pending" && (
-                    <>
-                      <span className="text-gray-300">·</span>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
-                        Pending
-                      </span>
-                    </>
-                  )}
+            <div key={day.date}>
+              {/* Date Header */}
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h3 className="text-sm font-semibold text-[#2d3436]">{day.label}</h3>
+                <span className="text-sm font-medium text-[#e17055]">
+                  -Rs {day.dayTotal.toLocaleString()}
+                </span>
               </div>
 
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-semibold text-[#2d3436] tabular-nums">
-                      -Rs {tx.amount.toLocaleString()}
-                    </span>
-                    <ChevronRight
-                      size={16}
-                      strokeWidth={1.5}
-                      className="text-gray-300 group-hover:text-gray-500 transition-colors"
-                    />
-                  </div>
-                </div>
-              ))}
+              {/* Transaction Cards */}
+              <div className="bg-white rounded-2xl border border-gray-100/80 shadow-sm overflow-hidden">
+                {day.transactions.map((tx, i) => (
+                  <ExpenseRowItem
+                    key={tx.id}
+                    tx={tx}
+                    isLast={i === day.transactions.length - 1}
+                    isCycleOpen={isCycleOpen}
+                    categories={categories}
+                    categoryColor={getCategoryColor(tx.category_name)}
+                    categoryIcon={getCategoryIcon(tx.category_name)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
 
         {groupedExpenses.length === 0 && (
           <div className="text-center py-16">
@@ -468,6 +424,7 @@ const daysInCycle = monthlyCycle?.days_in_cycle ?? 30
           </div>
         )}
       </div>
+
     </div>
   )
 }
